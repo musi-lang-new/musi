@@ -101,17 +101,15 @@ type t =
   | Eof
 
 type token = { kind : t; span : Musi_shared.Span.t }
+type token_stream = { tokens : token array; mutable pos : int }
 
 let make kind span = { kind; span }
 let eof span = { kind = Eof; span }
-
-type token_stream = { tokens : token array; mutable pos : int }
-
 let make_stream tokens = { tokens = Array.of_list tokens; pos = 0 }
 let at_end s = s.pos >= Array.length s.tokens
 let curr s = if at_end s then eof Musi_shared.Span.dummy else s.tokens.(s.pos)
 
-let peek s =
+let peek_next s =
   if s.pos + 1 >= Array.length s.tokens then eof Musi_shared.Span.dummy
   else s.tokens.(s.pos + 1)
 

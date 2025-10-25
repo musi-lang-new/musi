@@ -1,3 +1,4 @@
+(** Numeric literal suffixes *)
 type suffix =
   | I8
   | I16
@@ -13,10 +14,9 @@ type suffix =
   | B32
   | B64
 
+(** Token types *)
 type t =
-  (* Identifiers *)
   | Ident of Musi_shared.Interner.symbol
-  (* Literals *)
   | LitInt of string * suffix option
   | LitFloat of string * suffix option
   | LitText of Musi_shared.Interner.symbol
@@ -25,7 +25,6 @@ type t =
   | TemplateHead of Musi_shared.Interner.symbol
   | TemplateMiddle of Musi_shared.Interner.symbol
   | TemplateTail of Musi_shared.Interner.symbol
-  (* Keywords (alphabetically) *)
   | KwAlias
   | KwAnd
   | KwAs
@@ -66,7 +65,6 @@ type t =
   | KwWhere
   | KwWhile
   | KwXor
-  (* Delimiters *)
   | LParen
   | RParen
   | LBracket
@@ -81,7 +79,6 @@ type t =
   | Question
   | Bang
   | Dollar
-  (* Operators *)
   | Plus
   | Minus
   | Star
@@ -98,25 +95,39 @@ type t =
   | ColonEq
   | DotDotLt
   | DotDotDot
-  (* Trivia *)
   | Whitespace
   | Newline
   | LineComment of { content : Musi_shared.Interner.symbol }
   | BlockComment of { content : Musi_shared.Interner.symbol; docstyle : bool }
-  (* Special *)
   | Error
   | Eof
 
+(** Token with source location *)
 type token = { kind : t; span : Musi_shared.Span.t }
 
-val make : t -> Musi_shared.Span.t -> token
-val eof : Musi_shared.Span.t -> token
-val kind_to_string : Musi_shared.Interner.t -> t -> string
-
+(** Token stream for parsing *)
 type token_stream
 
+(** Create token with span *)
+val make : t -> Musi_shared.Span.t -> token
+
+(** Create EOF token *)
+val eof : Musi_shared.Span.t -> token
+
+(** Convert token to string representation *)
+val kind_to_string : Musi_shared.Interner.t -> t -> string
+
+(** Create token stream from list *)
 val make_stream : token list -> token_stream
+
+(** Get current token *)
 val curr : token_stream -> token
+
+(** Peek next token *)
 val peek : token_stream -> token
+
+(** Advance to next token *)
 val advance : token_stream -> unit
+
+(** Expect specific token kind *)
 val expect : token_stream -> t -> token option
