@@ -109,7 +109,7 @@ let make_stream tokens = { tokens = Array.of_list tokens; pos = 0 }
 let at_end s = s.pos >= Array.length s.tokens
 let curr s = if at_end s then eof Musi_shared.Span.dummy else s.tokens.(s.pos)
 
-let peek_next s =
+let peek s =
   if s.pos + 1 >= Array.length s.tokens then eof Musi_shared.Span.dummy
   else s.tokens.(s.pos + 1)
 
