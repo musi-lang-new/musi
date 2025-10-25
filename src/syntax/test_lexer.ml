@@ -323,6 +323,11 @@ let test_confusing_octal () =
   let _tokens, diags = Lexer.lex lexer in
   check bool "confusing octal warning" true (diags.warnings > 0)
 
+let test_mixed_separators () =
+  let lexer = make_lexer "123_456.789" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "mixed separators warning" true (diags.warnings > 0)
+
 let test_invalid_hex_escape () =
   let lexer = make_lexer "\"\\xGG\"" in
   let _tokens, diags = Lexer.lex lexer in
@@ -413,5 +418,6 @@ let () =
             `Quick
             test_consecutive_underscores
         ; test_case "confusing_octal" `Quick test_confusing_octal
+        ; test_case "mixed_separators" `Quick test_mixed_separators
         ] )
     ]
