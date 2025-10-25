@@ -1,5 +1,4 @@
 open Alcotest
-
 module Token = Musi_syntax.Token
 module Lexer = Musi_syntax.Lexer
 module Interner = Musi_shared.Interner
@@ -202,6 +201,146 @@ let test_invalid_character () =
   let _tokens, diags = Lexer.lex lexer in
   check bool "has error diagnostic" true (Diagnostic.has_errors diags)
 
+let test_doc_line_comments () =
+  let lexer = make_lexer "/// doc comment\n// regular comment" in
+  let tokens, _diags = Lexer.lex lexer in
+  let comment_tokens =
+    List.filter
+      (fun tok ->
+        match tok.Token.kind with Token.LineComment _ -> true | _ -> false)
+      tokens
+  in
+  check int "two line comments" 2 (List.length comment_tokens)
+
+let test_doc_block_comments () =
+  let lexer = make_lexer "/** doc comment */ /* regular comment */" in
+  let tokens, _diags = Lexer.lex lexer in
+  let comment_tokens =
+    List.filter
+      (fun tok ->
+        match tok.Token.kind with
+        | Token.BlockComment { docstyle = true; _ } -> true
+        | _ -> false)
+      tokens
+  in
+  check int "one doc block comment" 1 (List.length comment_tokens)
+
+let test_unicode_escapes_braced () =
+  let lexer = make_lexer "\"\\u{41}\\u{1F600}\"" in
+  let tokens, _diags = Lexer.lex lexer in
+  match
+    List.find_opt
+      (fun tok ->
+        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
+      tokens
+  with
+  | Some _ -> ()
+  | None -> fail "expected string with unicode escapes"
+
+let test_unicode_escapes_fixed () =
+  let lexer = make_lexer "\"\\u0041\\U00000042\"" in
+  let tokens, _diags = Lexer.lex lexer in
+  match
+    List.find_opt
+      (fun tok ->
+        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
+      tokens
+  with
+  | Some _ -> ()
+  | None -> fail "expected string with fixed unicode escapes"
+
+let test_unicode_escape_errors () =
+  let lexer = make_lexer "\"\\u{110000}\"" in
+  let _tokens, diags = Lexer.lex lexer in
+  check
+    bool
+    "invalid unicode out of range error"
+    true
+    (Diagnostic.has_errors diags)
+
+let test_unicode_surrogate_error () =
+  let lexer = make_lexer "\"\\u{D800}\"" in
+  let _tokens, diags = Lexer.lex lexer in
+  check
+    bool
+    "invalid unicode surrogate error"
+    true
+    (Diagnostic.has_errors diags)
+
+let test_malformed_unicode_escapes () =
+  let lexer = make_lexer "\"\\u{\"" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "malformed unicode escape error" true (Diagnostic.has_errors diags)
+
+let test_binary_literals () =
+  let lexer = make_lexer "0b1010 0B1111" in
+  let tokens, _diags = Lexer.lex lexer in
+  let binary_tokens =
+    List.filter
+      (fun tok ->
+        match tok.Token.kind with Token.LitInt _ -> true | _ -> false)
+      tokens
+  in
+  check int "two binary literals" 2 (List.length binary_tokens)
+
+let test_octal_literals () =
+  let lexer = make_lexer "0o777 0O123" in
+  let tokens, _diags = Lexer.lex lexer in
+  let octal_tokens =
+    List.filter
+      (fun tok ->
+        match tok.Token.kind with Token.LitInt _ -> true | _ -> false)
+      tokens
+  in
+  check int "two octal literals" 2 (List.length octal_tokens)
+
+let test_hex_literals () =
+  let lexer = make_lexer "0xFF 0x123abc" in
+  let tokens, _diags = Lexer.lex lexer in
+  let hex_tokens =
+    List.filter
+      (fun tok ->
+        match tok.Token.kind with Token.LitInt _ -> true | _ -> false)
+      tokens
+  in
+  check int "two hex literals" 2 (List.length hex_tokens)
+
+let test_scientific_notation () =
+  let lexer = make_lexer "1e10 3.14e-2 2E+5" in
+  let tokens, _diags = Lexer.lex lexer in
+  let sci_tokens =
+    List.filter
+      (fun tok ->
+        match tok.Token.kind with Token.LitFloat _ -> true | _ -> false)
+      tokens
+  in
+  check int "three scientific literals" 3 (List.length sci_tokens)
+
+let test_invalid_suffix () =
+  let lexer = make_lexer "123xyz" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "invalid suffix error" true (Diagnostic.has_errors diags)
+
+let test_leading_zeros () =
+  let lexer = make_lexer "0123" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "leading zeros error" true (Diagnostic.has_errors diags)
+
+let test_empty_suffix () =
+  let lexer = make_lexer "123_" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "empty suffix error" true (Diagnostic.has_errors diags)
+
+let test_invalid_hex_escape () =
+  let lexer = make_lexer "\"\\xGG\"" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "invalid hex digit error" true (Diagnostic.has_errors diags)
+
+let test_unterminated_hex_escape () =
+  let lexer = make_lexer "\"\\x" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "unterminated hex escape error" true (Diagnostic.has_errors diags)
+
 let () =
   run
     "Lexer"
@@ -229,5 +368,30 @@ let () =
             `Quick
             test_unterminated_block_comment
         ; test_case "invalid_character" `Quick test_invalid_character
+        ; test_case "doc_line_comments" `Quick test_doc_line_comments
+        ; test_case "doc_block_comments" `Quick test_doc_block_comments
+        ; test_case "unicode_escapes_braced" `Quick test_unicode_escapes_braced
+        ; test_case "unicode_escapes_fixed" `Quick test_unicode_escapes_fixed
+        ; test_case "unicode_escape_errors" `Quick test_unicode_escape_errors
+        ; test_case
+            "unicode_surrogate_error"
+            `Quick
+            test_unicode_surrogate_error
+        ; test_case "invalid_hex_escape" `Quick test_invalid_hex_escape
+        ; test_case
+            "unterminated_hex_escape"
+            `Quick
+            test_unterminated_hex_escape
+        ; test_case
+            "malformed_unicode_escapes"
+            `Quick
+            test_malformed_unicode_escapes
+        ; test_case "binary_literals" `Quick test_binary_literals
+        ; test_case "octal_literals" `Quick test_octal_literals
+        ; test_case "hex_literals" `Quick test_hex_literals
+        ; test_case "scientific_notation" `Quick test_scientific_notation
+        ; test_case "invalid_suffix" `Quick test_invalid_suffix
+        ; test_case "leading_zeros" `Quick test_leading_zeros
+        ; test_case "empty_suffix" `Quick test_empty_suffix
         ] )
     ]
