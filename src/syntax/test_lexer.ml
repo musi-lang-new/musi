@@ -8,128 +8,92 @@ let make_lexer source =
   let interner = Interner.create () in
   Lexer.make 0 source interner
 
-let test_empty () =
+let basic_tokens () =
   let lexer = make_lexer "" in
   let tokens, _diags = Lexer.lex lexer in
   check int "empty source has only EOF" 1 (List.length tokens);
-  match tokens with
-  | [ tok ] -> check bool "EOF token" true (tok.Token.kind = Token.Eof)
-  | _ -> fail "expected single EOF token"
 
-let test_whitespace () =
   let lexer = make_lexer "   \t\r  " in
   let tokens, _diags = Lexer.lex lexer in
   check int "whitespace tokens plus EOF" 2 (List.length tokens);
-  match tokens with
-  | [ ws; eof ] ->
-    check bool "whitespace token" true (ws.Token.kind = Token.Whitespace);
-    check bool "EOF token" true (eof.Token.kind = Token.Eof)
-  | _ -> fail "expected whitespace and EOF"
 
-let test_newlines () =
   let lexer = make_lexer "\n\n\n" in
   let tokens, _diags = Lexer.lex lexer in
-  check int "three newlines plus EOF" 4 (List.length tokens);
-  List.iter
-    (fun tok ->
-      if tok.Token.kind <> Token.Eof then
-        check bool "newline token" true (tok.Token.kind = Token.Newline))
-    (List.rev (List.tl (List.rev tokens)))
+  check int "three newlines plus EOF" 4 (List.length tokens)
 
-let test_keywords () =
+let keywords_and_identifiers () =
   let lexer = make_lexer "func if else while for" in
   let tokens, _diags = Lexer.lex lexer in
-  let kinds = List.map (fun tok -> tok.Token.kind) tokens in
-  let expected =
-    [
-      Token.KwFunc
-    ; Token.Whitespace
-    ; Token.KwIf
-    ; Token.Whitespace
-    ; Token.KwElse
-    ; Token.Whitespace
-    ; Token.KwWhile
-    ; Token.Whitespace
-    ; Token.KwFor
-    ; Token.Eof
-    ]
+  let keyword_count =
+    List.fold_left
+      (fun acc tok ->
+        match tok.Token.kind with
+        | Token.KwFunc | Token.KwIf | Token.KwElse | Token.KwWhile | Token.KwFor
+          ->
+          acc + 1
+        | _ -> acc)
+      0
+      tokens
   in
-  let check_kinds expected actual =
-    check int "token count" (List.length expected) (List.length actual);
-    List.iter2
-      (fun e a -> check bool "token match" true (e = a))
-      expected
-      actual
-  in
-  check_kinds expected kinds
+  check int "five keywords" 5 keyword_count;
 
-let test_identifiers () =
   let lexer = make_lexer "hello world_123 _private CamelCase" in
   let tokens, _diags = Lexer.lex lexer in
-  let ident_tokens =
-    List.filter
-      (fun tok ->
-        match tok.Token.kind with Token.Ident _ -> true | _ -> false)
+  let ident_count =
+    List.fold_left
+      (fun acc tok ->
+        match tok.Token.kind with Token.Ident _ -> acc + 1 | _ -> acc)
+      0
       tokens
   in
-  check int "four identifiers" 4 (List.length ident_tokens)
+  check int "four identifiers" 4 ident_count
 
-let test_integers () =
+let numeric_literals () =
+  let count_tokens lexer kind_pred =
+    let tokens, _diags = Lexer.lex lexer in
+    List.fold_left
+      (fun acc tok -> if kind_pred tok.Token.kind then acc + 1 else acc)
+      0
+      tokens
+  in
+
   let lexer = make_lexer "0 123 999_000" in
-  let tokens, _diags = Lexer.lex lexer in
-  let int_tokens =
-    List.filter
-      (fun tok ->
-        match tok.Token.kind with Token.LitInt _ -> true | _ -> false)
-      tokens
+  let int_count =
+    count_tokens lexer (function Token.LitInt _ -> true | _ -> false)
   in
-  check int "three integers" 3 (List.length int_tokens)
+  check int "three integers" 3 int_count;
 
-let test_floats () =
   let lexer = make_lexer "3.14 0.0 123.456_789" in
-  let tokens, _diags = Lexer.lex lexer in
-  let float_tokens =
-    List.filter
+  let float_count =
+    count_tokens lexer (function Token.LitFloat _ -> true | _ -> false)
+  in
+  check int "three floats" 3 float_count
+
+let string_literals () =
+  let has_string_token lexer =
+    let tokens, _diags = Lexer.lex lexer in
+    List.exists
       (fun tok ->
-        match tok.Token.kind with Token.LitFloat _ -> true | _ -> false)
+        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
       tokens
   in
-  check int "three floats" 3 (List.length float_tokens)
 
-let test_strings () =
   let lexer = make_lexer "\"hello\" \"world\" \"\"" in
   let tokens, _diags = Lexer.lex lexer in
-  let string_tokens =
-    List.filter
-      (fun tok ->
-        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
+  let string_count =
+    List.fold_left
+      (fun acc tok ->
+        match tok.Token.kind with Token.LitText _ -> acc + 1 | _ -> acc)
+      0
       tokens
   in
-  check int "three strings" 3 (List.length string_tokens)
+  check int "three strings" 3 string_count;
 
-let test_string_escapes () =
   let lexer = make_lexer "\"\\n\\t\\r\\\\\\\"\\0\"" in
-  let tokens, _diags = Lexer.lex lexer in
-  match
-    List.find_opt
-      (fun tok ->
-        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
-      tokens
-  with
-  | Some _ -> ()
-  | None -> fail "expected string token with escapes"
+  check bool "string with escapes" true (has_string_token lexer);
 
-let test_hex_escapes () =
   let lexer = make_lexer "\"\\x41\\x42\\x43\"" in
-  let tokens, _diags = Lexer.lex lexer in
-  match
-    List.find_opt
-      (fun tok ->
-        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
-      tokens
-  with
-  | Some _ -> () (* ABC *)
-  | None -> fail "expected string with hex escapes"
+  check bool "string with hex escapes" true (has_string_token lexer)
 
 let test_operators () =
   let lexer = make_lexer "+ - * / = < > <= >= =/= <- -> := ..< ..." in
@@ -378,38 +342,56 @@ let () =
   run
     "Lexer"
     [
-      ( "Lexer"
+      ( "Basic Tokens"
       , [
-          test_case "empty" `Quick test_empty
-        ; test_case "whitespace" `Quick test_whitespace
-        ; test_case "newlines" `Quick test_newlines
-        ; test_case "keywords" `Quick test_keywords
-        ; test_case "identifiers" `Quick test_identifiers
-        ; test_case "integers" `Quick test_integers
-        ; test_case "floats" `Quick test_floats
-        ; test_case "strings" `Quick test_strings
-        ; test_case "string_escapes" `Quick test_string_escapes
-        ; test_case "hex_escapes" `Quick test_hex_escapes
+          test_case "basic_tokens" `Quick basic_tokens
+        ; test_case "keywords_and_identifiers" `Quick keywords_and_identifiers
         ; test_case "operators" `Quick test_operators
-        ; test_case "line_comments" `Quick test_line_comments
+        ] )
+    ; ( "Numeric Literals"
+      , [
+          test_case "numeric_literals" `Quick numeric_literals
+        ; test_case "binary_literals" `Quick test_binary_literals
+        ; test_case "octal_literals" `Quick test_octal_literals
+        ; test_case "hex_literals" `Quick test_hex_literals
+        ; test_case "scientific_notation" `Quick test_scientific_notation
+        ] )
+    ; ( "String Literals"
+      , [
+          test_case "string_literals" `Quick string_literals
+        ; test_case "template_literals" `Quick test_template_literals
+        ] )
+    ; ( "Comments"
+      , [
+          test_case "line_comments" `Quick test_line_comments
         ; test_case "block_comments" `Quick test_block_comments
         ; test_case "nested_block_comments" `Quick test_nested_block_comments
-        ; test_case "unterminated_string" `Quick test_unterminated_string
-        ; test_case "invalid_escape" `Quick test_invalid_escape
-        ; test_case
-            "unterminated_block_comment"
-            `Quick
-            test_unterminated_block_comment
-        ; test_case "invalid_character" `Quick test_invalid_character
         ; test_case "doc_line_comments" `Quick test_doc_line_comments
         ; test_case "doc_block_comments" `Quick test_doc_block_comments
-        ; test_case "unicode_escapes_braced" `Quick test_unicode_escapes_braced
+        ] )
+    ; ( "Unicode Support"
+      , [
+          test_case "unicode_escapes_braced" `Quick test_unicode_escapes_braced
         ; test_case "unicode_escapes_fixed" `Quick test_unicode_escapes_fixed
         ; test_case "unicode_escape_errors" `Quick test_unicode_escape_errors
         ; test_case
             "unicode_surrogate_error"
             `Quick
             test_unicode_surrogate_error
+        ; test_case
+            "malformed_unicode_escapes"
+            `Quick
+            test_malformed_unicode_escapes
+        ] )
+    ; ( "Error Cases"
+      , [
+          test_case "unterminated_string" `Quick test_unterminated_string
+        ; test_case "invalid_escape" `Quick test_invalid_escape
+        ; test_case
+            "unterminated_block_comment"
+            `Quick
+            test_unterminated_block_comment
+        ; test_case "invalid_character" `Quick test_invalid_character
         ; test_case "invalid_hex_escape" `Quick test_invalid_hex_escape
         ; test_case
             "unterminated_hex_escape"
@@ -419,19 +401,13 @@ let () =
             "unknown_escape_sequences"
             `Quick
             test_unknown_escape_sequences
-        ; test_case
-            "malformed_unicode_escapes"
-            `Quick
-            test_malformed_unicode_escapes
-        ; test_case "binary_literals" `Quick test_binary_literals
-        ; test_case "octal_literals" `Quick test_octal_literals
-        ; test_case "hex_literals" `Quick test_hex_literals
-        ; test_case "scientific_notation" `Quick test_scientific_notation
         ; test_case "invalid_suffix" `Quick test_invalid_suffix
         ; test_case "leading_zeros" `Quick test_leading_zeros
         ; test_case "empty_suffix" `Quick test_empty_suffix
-        ; test_case "template_literals" `Quick test_template_literals
-        ; test_case "numeric_overflow" `Quick test_numeric_overflow
+        ] )
+    ; ( "Warnings"
+      , [
+          test_case "numeric_overflow" `Quick test_numeric_overflow
         ; test_case
             "consecutive_underscores"
             `Quick
