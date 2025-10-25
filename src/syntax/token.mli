@@ -58,6 +58,7 @@ type t =
   | KwSelf
   | KwShl
   | KwShr
+  | KwThen
   | KwTrait
   | KwTrue
   | KwTry

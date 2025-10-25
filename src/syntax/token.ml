@@ -55,6 +55,7 @@ type t =
   | KwSelf
   | KwShl
   | KwShr
+  | KwThen
   | KwTrait
   | KwTrue
   | KwTry
@@ -172,6 +173,7 @@ let kind_to_string interner = function
   | KwSelf -> "self"
   | KwShl -> "shl"
   | KwShr -> "shr"
+  | KwThen -> "then"
   | KwTrait -> "trait"
   | KwTrue -> "true"
   | KwTry -> "try"
