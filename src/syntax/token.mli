@@ -80,7 +80,6 @@ type t =
   | At
   | Question
   | Bang
-  | Backtick
   | Dollar
   (* Operators *)
   | Plus

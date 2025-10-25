@@ -76,7 +76,6 @@ type t =
   | At
   | Question
   | Bang
-  | Backtick
   | Dollar
   | Plus
   | Minus
@@ -193,7 +192,6 @@ let kind_to_string interner = function
   | At -> "@"
   | Question -> "?"
   | Bang -> "!"
-  | Backtick -> "`"
   | Dollar -> "$"
   | Plus -> "+"
   | Minus -> "-"
