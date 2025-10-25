@@ -142,7 +142,7 @@ let () =
         ] )
     ; ( "Control Flow"
       , [
-          test_case "if_else" `Quick test_if_then_else
+          test_case "if_then_else" `Quick test_if_then_else
         ; test_case "while_loop" `Quick test_while_loop
         ] )
     ]
