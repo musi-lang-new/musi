@@ -1,8 +1,16 @@
+(* ========================================
+   TYPES
+   ======================================== *)
+
 type t = {
     stream : Token.token_stream
   ; interner : Musi_shared.Interner.t
   ; diags : Musi_shared.Diagnostic.diagnostic_bag ref
 }
+
+(* ========================================
+   UTILITIES
+   ======================================== *)
 
 let make tokens interner =
   {
@@ -44,6 +52,10 @@ let make_span_from_to start_span end_span =
 
 let make_span_to_curr t start_span = make_span_from_to start_span (curr t).span
 
+(* ========================================
+   AST CONSTRUCTORS
+   ======================================== *)
+
 let make_expr (kind : Tree.expr_kind) span leading : Tree.expr =
   { Tree.kind; span; leading; trailing = []; typ = None; sym = None }
 
@@ -70,6 +82,10 @@ let expect t kind =
     error t "expected token" (curr t).span;
     false)
 
+(* ========================================
+   PRECEDENCE & OPERATORS
+   ======================================== *)
+
 let parse_separated parse_item sep term t =
   let rec loop acc =
     if (curr t).kind = term || (curr t).kind = Token.Eof then List.rev acc
@@ -90,6 +106,10 @@ let infix_bp = function
   | Token.Plus | Token.Minus -> Some (9, 10)
   | Token.Lt | Token.Gt | Token.LtEq | Token.GtEq | Token.Eq -> Some (5, 6)
   | _ -> None
+
+(* ========================================
+   EXPRESSION PARSING
+   ======================================== *)
 
 let rec parse_expr t : Tree.expr = parse_expr_bp t 0
 
@@ -188,6 +208,10 @@ and parse_if_expr t start leading : Tree.expr =
   let then_br = make_expr (Tree.Block { stmts = then_stmts }) span [] in
   make_expr (Tree.If { cond; then_br; else_br }) span leading
 
+(* ========================================
+   STATEMENT PARSING
+   ======================================== *)
+
 and parse_stmt t : Tree.stmt =
   let leading = collect_trivia t in
   match (Token.curr t.stream).kind with
@@ -283,7 +307,11 @@ and parse_ty t : Tree.typ =
   in
   make_typ kind tok.span leading
 
-let rec parse_func_decl t =
+(* ========================================
+   DECLARATION PARSING
+   ======================================== *)
+
+and parse_func_decl t : Tree.decl =
   let leading = collect_trivia t in
   let start = (Token.curr t.stream).span in
   Token.advance t.stream;
@@ -329,6 +357,10 @@ and parse_param t =
   let ty = parse_ty t in
   let span = make_span_to_curr t start in
   { Tree.name; typ = ty; span; leading; trailing = [] }
+
+(* ========================================
+   PUBLIC API
+   ======================================== *)
 
 let parse_program tokens interner =
   let t = make tokens interner in
