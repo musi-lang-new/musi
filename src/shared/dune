@@ -1,0 +1,19 @@
+(library
+ (public_name musi.shared)
+ (name musi_shared)
+ (modules interner span source diagnostic))
+
+(test
+ (name test_diagnostic)
+ (modules test_diagnostic)
+ (libraries musi_shared alcotest))
+
+(test
+ (name test_interner)
+ (modules test_interner)
+ (libraries musi_shared alcotest))
+
+(test
+ (name test_span)
+ (modules test_span)
+ (libraries musi_shared alcotest))

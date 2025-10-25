@@ -1,0 +1,15 @@
+(library
+ (public_name musi.syntax)
+ (name musi_syntax)
+ (modules token lexer parser tree)
+ (libraries musi.shared))
+
+(test
+ (name test_lexer)
+ (modules test_lexer)
+ (libraries musi_syntax alcotest))
+
+(test
+ (name test_parser)
+ (modules test_parser)
+ (libraries musi_syntax alcotest))

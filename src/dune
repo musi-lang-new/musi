@@ -1,0 +1,4 @@
+(library
+ (name musi)
+ (modules compiler)
+ (libraries musi.shared musi.syntax musi.semantics musi.codegen musi.runtime))

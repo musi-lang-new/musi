@@ -1,0 +1,4 @@
+(library
+ (public_name musi.codegen)
+ (name musi_codegen)
+ (libraries musi.shared musi.syntax musi.semantics alcotest))
