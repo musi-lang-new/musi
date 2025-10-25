@@ -369,6 +369,11 @@ let test_unterminated_hex_escape () =
   let _tokens, diags = Lexer.lex lexer in
   check bool "unterminated hex escape error" true (Diagnostic.has_errors diags)
 
+let test_unknown_escape_sequences () =
+  let lexer = make_lexer "\"\\a\\b\\c\"" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "unknown escape sequences error" true (Diagnostic.has_errors diags)
+
 let () =
   run
     "Lexer"
@@ -410,6 +415,10 @@ let () =
             "unterminated_hex_escape"
             `Quick
             test_unterminated_hex_escape
+        ; test_case
+            "unknown_escape_sequences"
+            `Quick
+            test_unknown_escape_sequences
         ; test_case
             "malformed_unicode_escapes"
             `Quick
