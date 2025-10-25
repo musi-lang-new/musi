@@ -245,6 +245,15 @@ let check_consecutive_underscores t text start =
   in
   check 0
 
+let check_mixed_separators t text start =
+  let has_underscore = String.contains text '_' in
+  let has_other_sep =
+    String.contains text '.' || String.contains text 'e'
+    || String.contains text 'E'
+  in
+  if has_underscore && has_other_sep then
+    warning t "mixed separators in numeric literal" start
+
 let check_numeric_overflow t text start =
   try
     let _ =
@@ -333,6 +342,7 @@ let scan_number t start =
       let suffix = scan_suffix t in
       let text = slice t start in
       check_consecutive_underscores t text start;
+      check_mixed_separators t text start;
       if not (has_dot || has_exp) then check_numeric_overflow t text start;
       let kind =
         if has_dot || has_exp then Token.LitFloat (text, suffix)
@@ -350,6 +360,7 @@ let scan_number t start =
     let suffix = scan_suffix t in
     let text = slice t start in
     check_consecutive_underscores t text start;
+    check_mixed_separators t text start;
     if not (has_dot || has_exp) then check_numeric_overflow t text start;
     let kind =
       if has_dot || has_exp then Token.LitFloat (text, suffix)
