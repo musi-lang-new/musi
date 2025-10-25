@@ -255,7 +255,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.musi",
-                    "match": "\\b(await|break|case|continue|defer|else|export|for|from|if|in|import|match|return|try|where|while)\\b"
+                    "match": "\\b(await|break|case|continue|defer|else|export|for|from|if|in|import|match|return|then|try|where|while)\\b"
                 },
                 {
                     "name": "storage.type.musi",
