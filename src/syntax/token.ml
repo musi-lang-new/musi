@@ -31,7 +31,6 @@ type t =
   | KwBreak
   | KwCase
   | KwChoice
-  | KwConst
   | KwContinue
   | KwDefer
   | KwElse
@@ -149,7 +148,6 @@ let kind_to_string interner = function
   | KwBreak -> "break"
   | KwCase -> "case"
   | KwChoice -> "choice"
-  | KwConst -> "const"
   | KwContinue -> "continue"
   | KwDefer -> "defer"
   | KwElse -> "else"

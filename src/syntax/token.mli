@@ -34,7 +34,6 @@ type t =
   | KwBreak
   | KwCase
   | KwChoice
-  | KwConst
   | KwContinue
   | KwDefer
   | KwElse
