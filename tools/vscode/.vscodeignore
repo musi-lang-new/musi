@@ -1,0 +1,16 @@
+# development files
+.vscode/
+.gitattributes
+.gitignore
+tsconfig.json
+
+# source files
+src/
+out/src/**
+**/*.map
+
+# documentation
+docs/
+
+# dependencies
+node_modules/
