@@ -6,6 +6,7 @@ type file = {
 }
 
 type t = file list
+type digest = string
 
 let compute_lines source =
   let rec loop i acc =
@@ -47,7 +48,4 @@ let line_text file line =
     Some (String.sub file.source start (end_ - start) |> String.trim)
 
 let path file = file.path
-
-type digest = string
-
 let compute_digest text = Digest.(string text |> to_hex)
