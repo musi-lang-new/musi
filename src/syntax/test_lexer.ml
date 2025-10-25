@@ -331,6 +331,34 @@ let test_empty_suffix () =
   let _tokens, diags = Lexer.lex lexer in
   check bool "empty suffix error" true (Diagnostic.has_errors diags)
 
+let test_template_literals () =
+  let lexer = make_lexer "`hello world`" in
+  let tokens, _diags = Lexer.lex lexer in
+  let template_tokens =
+    List.filter
+      (fun tok ->
+        match tok.Token.kind with
+        | Token.LitNoSubstTemplate _ -> true
+        | _ -> false)
+      tokens
+  in
+  check int "one template literal" 1 (List.length template_tokens)
+
+let test_numeric_overflow () =
+  let lexer = make_lexer "999999999999999999999999999999" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "numeric overflow warning" true (diags.warnings > 0)
+
+let test_consecutive_underscores () =
+  let lexer = make_lexer "1__2" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "consecutive underscores warning" true (diags.warnings > 0)
+
+let test_confusing_octal () =
+  let lexer = make_lexer "0O123" in
+  let _tokens, diags = Lexer.lex lexer in
+  check bool "confusing octal warning" true (diags.warnings > 0)
+
 let test_invalid_hex_escape () =
   let lexer = make_lexer "\"\\xGG\"" in
   let _tokens, diags = Lexer.lex lexer in
@@ -393,5 +421,12 @@ let () =
         ; test_case "invalid_suffix" `Quick test_invalid_suffix
         ; test_case "leading_zeros" `Quick test_leading_zeros
         ; test_case "empty_suffix" `Quick test_empty_suffix
+        ; test_case "template_literals" `Quick test_template_literals
+        ; test_case "numeric_overflow" `Quick test_numeric_overflow
+        ; test_case
+            "consecutive_underscores"
+            `Quick
+            test_consecutive_underscores
+        ; test_case "confusing_octal" `Quick test_confusing_octal
         ] )
     ]
