@@ -106,6 +106,7 @@ let keyword_of_string = function
   | "break" -> Some Token.KwBreak
   | "case" -> Some Token.KwCase
   | "choice" -> Some Token.KwChoice
+  | "const" -> Some Token.KwConst
   | "continue" -> Some Token.KwContinue
   | "defer" -> Some Token.KwDefer
   | "else" -> Some Token.KwElse
@@ -119,7 +120,6 @@ let keyword_of_string = function
   | "import" -> Some Token.KwImport
   | "in" -> Some Token.KwIn
   | "is" -> Some Token.KwIs
-  | "let" -> Some Token.KwLet
   | "match" -> Some Token.KwMatch
   | "mod" -> Some Token.KwMod
   | "not" -> Some Token.KwNot
