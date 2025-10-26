@@ -2,7 +2,7 @@ type trivia = Token.token list
 
 type modifier_set = {
     exportness : bool
-  ; externness : bool
+  ; externness : bool * Musi_shared.Interner.symbol option
   ; unsafeness : bool
   ; constness : bool
   ; asyncness : bool
