@@ -2,7 +2,7 @@ type trivia = Token.token list
 
 type modifier_set = {
     exportness : bool
-  ; externness : bool
+  ; externness : bool * Musi_shared.Interner.symbol option
   ; unsafeness : bool
   ; constness : bool
   ; asyncness : bool
@@ -11,7 +11,7 @@ type modifier_set = {
 let empty_modifier_set =
   {
     exportness = false
-  ; externness = false
+  ; externness = (false, None)
   ; unsafeness = false
   ; constness = false
   ; asyncness = false
