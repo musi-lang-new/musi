@@ -1,7 +1,7 @@
 (** Token trivia for formatting *)
 type trivia = Token.token list
 
-(** Modifier flags *)
+(** Set of modifiers applicable to declarations and types *)
 type modifier_set = {
     exportness : bool
   ; externness : bool
@@ -10,13 +10,9 @@ type modifier_set = {
   ; asyncness : bool
 }
 
-(** Type reference *)
 type typ_ref = int
-
-(** Symbol reference *)
 type symbol_ref = int
 
-(** Type constraint *)
 type constraint_ = {
     trait : Musi_shared.Interner.symbol
   ; args : typ list
@@ -70,12 +66,10 @@ and pat = {
   ; mutable typ : typ_ref option
 }
 
-(** Template part *)
 and template_part =
   | Text of { value : Musi_shared.Interner.symbol }
   | Expr of { expr : expr }
 
-(** Function parameter *)
 and param = {
     name : Musi_shared.Interner.symbol
   ; typ : typ
@@ -124,7 +118,6 @@ and expr = {
   ; mutable sym : symbol_ref option
 }
 
-(** Match case *)
 and match_case = {
     pat : pat
   ; guard : expr option
@@ -163,7 +156,6 @@ and stmt = {
   ; mutable sym : symbol_ref option
 }
 
-(** Record field definition *)
 and record_field = {
     name : Musi_shared.Interner.symbol
   ; typ : typ
@@ -173,7 +165,6 @@ and record_field = {
   ; trailing : trivia
 }
 
-(** Choice variant case *)
 and choice_case = {
     name : Musi_shared.Interner.symbol
   ; typ : typ option
@@ -182,7 +173,6 @@ and choice_case = {
   ; trailing : trivia
 }
 
-(** Trait method definition *)
 and trait_method = {
     name : Musi_shared.Interner.symbol
   ; params : param list
@@ -193,7 +183,6 @@ and trait_method = {
   ; trailing : trivia
 }
 
-(** Import item *)
 and import_item = {
     name : Musi_shared.Interner.symbol
   ; alias : Musi_shared.Interner.symbol option
