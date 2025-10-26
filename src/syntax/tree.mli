@@ -45,8 +45,35 @@ and typ_ref = int
 (** Symbol reference *)
 and symbol_ref = int
 
+(** Statement node kinds *)
+type stmt_kind =
+  | Expr of { expr : expr }
+  | Decl of { decl : decl }
+  | Bind of {
+        mutable_ : bool
+      ; name : Musi_shared.Interner.symbol
+      ; typ : typ option
+      ; init : expr
+    }
+  | Assign of { name : Musi_shared.Interner.symbol; value : expr }
+  | Return of { value : expr option }
+  | Break of { value : expr option }
+  | Continue
+  | While of { cond : expr; body : stmt list }
+  | For of { pat : pat; iter : expr; body : stmt list }
+  | Error
+
+(** Statement AST node *)
+and stmt = {
+    kind : stmt_kind
+  ; span : Musi_shared.Span.t
+  ; leading : trivia
+  ; trailing : trivia
+  ; mutable sym : symbol_ref option
+}
+
 (** Expression node kinds *)
-type expr_kind =
+and expr_kind =
   | IntLit of { value : string }
   | BinLit of { value : string }
   | TextLit of { value : Musi_shared.Interner.symbol }
@@ -88,34 +115,8 @@ and match_case = {
   ; trailing : trivia
 }
 
-(** Statement node kinds *)
-and stmt_kind =
-  | Expr of { expr : expr }
-  | Bind of {
-        mut : bool
-      ; name : Musi_shared.Interner.symbol
-      ; typ : typ option
-      ; init : expr
-    }
-  | Assign of { name : Musi_shared.Interner.symbol; value : expr }
-  | Return of { value : expr option }
-  | Break of { value : expr option }
-  | Continue
-  | While of { cond : expr; body : stmt list }
-  | For of { pat : pat; iter : expr; body : stmt list }
-  | Error
-
-(** Statement AST node *)
-and stmt = {
-    kind : stmt_kind
-  ; span : Musi_shared.Span.t
-  ; leading : trivia
-  ; trailing : trivia
-  ; mutable sym : symbol_ref option
-}
-
 (** Function parameter *)
-type param = {
+and param = {
     name : Musi_shared.Interner.symbol
   ; typ : typ
   ; span : Musi_shared.Span.t
@@ -124,7 +125,7 @@ type param = {
 }
 
 (** Record field definition *)
-type record_field = {
+and record_field = {
     name : Musi_shared.Interner.symbol
   ; typ : typ
   ; default_value : expr option
@@ -134,7 +135,7 @@ type record_field = {
 }
 
 (** Choice variant case *)
-type choice_case = {
+and choice_case = {
     name : Musi_shared.Interner.symbol
   ; typ : typ option
   ; span : Musi_shared.Span.t
@@ -143,7 +144,7 @@ type choice_case = {
 }
 
 (** Trait method definition *)
-type trait_method = {
+and trait_method = {
     name : Musi_shared.Interner.symbol
   ; params : param list
   ; ret_typ : typ option
@@ -154,7 +155,7 @@ type trait_method = {
 }
 
 (** Declaration node kinds *)
-type decl_kind =
+and decl_kind =
   | Func of {
         name : Musi_shared.Interner.symbol
       ; params : param list
