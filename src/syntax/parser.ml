@@ -63,10 +63,23 @@ let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
   { Tree.kind; span; leading; trailing = []; sym = None }
 
 let make_typ (kind : Tree.typ_kind) span leading : Tree.typ =
-  { Tree.kind; span; leading; trailing = [] }
+  {
+    Tree.kind
+  ; span
+  ; leading
+  ; trailing = []
+  ; modifiers = Tree.empty_modifier_set
+  }
 
 let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
-  { Tree.kind; span; leading; trailing = []; sym = None }
+  {
+    Tree.kind
+  ; span
+  ; leading
+  ; trailing = []
+  ; sym = None
+  ; modifiers = Tree.empty_modifier_set
+  }
 
 let error t msg span =
   t.diags :=
@@ -342,7 +355,7 @@ and parse_func_decl t : Tree.decl =
   let body = parse_block_stmts t in
   let _ = expect t Token.RBrace in
   let span = make_span_to_curr t start in
-  make_decl (Tree.Func { name; params; ret_typ; body }) span leading
+  make_decl (Tree.Func { name; params; ret_typ; body = Some body }) span leading
 
 and parse_params t = parse_separated parse_param Token.Comma Token.RParen t
 
