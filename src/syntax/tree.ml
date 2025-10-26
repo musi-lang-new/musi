@@ -56,7 +56,7 @@ and pat_kind =
   | Record of { fields : (Musi_shared.Interner.symbol * pat) list }
   | Array of { pats : pat list }
   | Range of { start : pat; end_ : pat; inclusive : bool }
-  | Choice of { variant : Musi_shared.Interner.symbol; pat : pat option }
+  | Choice of { member : Musi_shared.Interner.symbol; pat : pat option }
   | Or of { pats : pat list }
   | Rest of { name : Musi_shared.Interner.symbol option }
   | Error
@@ -155,7 +155,7 @@ and stmt = {
   ; mutable sym : symbol_ref option
 }
 
-and record_field = {
+and field = {
     name : Musi_shared.Interner.symbol
   ; typ : typ
   ; default_value : expr option
@@ -164,19 +164,9 @@ and record_field = {
   ; trailing : trivia
 }
 
-and choice_case = {
+and choice_member = {
     name : Musi_shared.Interner.symbol
   ; typ : typ option
-  ; span : Musi_shared.Span.t
-  ; leading : trivia
-  ; trailing : trivia
-}
-
-and trait_method = {
-    name : Musi_shared.Interner.symbol
-  ; params : param list
-  ; ret_typ : typ option
-  ; body : stmt list option
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
@@ -193,11 +183,14 @@ and decl_kind =
         name : Musi_shared.Interner.symbol
       ; params : param list
       ; ret_typ : typ option
-      ; body : stmt list
+      ; body : stmt list option
     }
-  | Record of { name : Musi_shared.Interner.symbol; fields : record_field list }
-  | Choice of { name : Musi_shared.Interner.symbol; cases : choice_case list }
-  | Trait of { name : Musi_shared.Interner.symbol; methods : trait_method list }
+  | Record of { name : Musi_shared.Interner.symbol; fields : field list }
+  | Choice of {
+        name : Musi_shared.Interner.symbol
+      ; members : choice_member list
+    }
+  | Trait of { name : Musi_shared.Interner.symbol; methods : decl list }
   | Alias of { name : Musi_shared.Interner.symbol; typ : typ }
   | Import of {
         path : Musi_shared.Interner.symbol

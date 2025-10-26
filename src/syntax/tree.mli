@@ -1,7 +1,5 @@
-(** Token trivia for formatting *)
 type trivia = Token.token list
 
-(** Set of modifiers applicable to declarations and types *)
 type modifier_set = {
     exportness : bool
   ; externness : bool
@@ -9,6 +7,8 @@ type modifier_set = {
   ; constness : bool
   ; asyncness : bool
 }
+
+val empty_modifier_set : modifier_set
 
 type typ_ref = int
 type symbol_ref = int
@@ -19,7 +19,6 @@ type constraint_ = {
   ; span : Musi_shared.Span.t
 }
 
-(** Type node kinds *)
 and typ_kind =
   | Named of { name : Musi_shared.Interner.symbol }
   | Func of { param_typs : typ list; ret_typ : typ }
@@ -32,7 +31,6 @@ and typ_kind =
   | Infer
   | Error
 
-(** Type AST node *)
 and typ = {
     kind : typ_kind
   ; span : Musi_shared.Span.t
@@ -41,7 +39,6 @@ and typ = {
   ; modifiers : modifier_set
 }
 
-(** Pattern node kinds *)
 and pat_kind =
   | Wildcard
   | Ident of { name : Musi_shared.Interner.symbol }
@@ -52,12 +49,11 @@ and pat_kind =
   | Record of { fields : (Musi_shared.Interner.symbol * pat) list }
   | Array of { pats : pat list }
   | Range of { start : pat; end_ : pat; inclusive : bool }
-  | Choice of { variant : Musi_shared.Interner.symbol; pat : pat option }
+  | Choice of { member : Musi_shared.Interner.symbol; pat : pat option }
   | Or of { pats : pat list }
   | Rest of { name : Musi_shared.Interner.symbol option }
   | Error
 
-(** Pattern AST node *)
 and pat = {
     kind : pat_kind
   ; span : Musi_shared.Span.t
@@ -78,7 +74,6 @@ and param = {
   ; trailing : trivia
 }
 
-(** Expression node kinds *)
 and expr_kind =
   | IntLit of { value : string }
   | BinLit of { value : string }
@@ -108,7 +103,6 @@ and expr_kind =
   | Template of { parts : template_part list }
   | Error
 
-(** Expression AST node *)
 and expr = {
     kind : expr_kind
   ; span : Musi_shared.Span.t
@@ -127,7 +121,6 @@ and match_case = {
   ; trailing : trivia
 }
 
-(** Statement node kinds *)
 and stmt_kind =
   | Expr of { expr : expr }
   | Decl of { decl : decl }
@@ -147,7 +140,6 @@ and stmt_kind =
   | Unsafe of { stmts : stmt list }
   | Error
 
-(** Statement AST node *)
 and stmt = {
     kind : stmt_kind
   ; span : Musi_shared.Span.t
@@ -156,7 +148,7 @@ and stmt = {
   ; mutable sym : symbol_ref option
 }
 
-and record_field = {
+and field = {
     name : Musi_shared.Interner.symbol
   ; typ : typ
   ; default_value : expr option
@@ -165,19 +157,9 @@ and record_field = {
   ; trailing : trivia
 }
 
-and choice_case = {
+and choice_member = {
     name : Musi_shared.Interner.symbol
   ; typ : typ option
-  ; span : Musi_shared.Span.t
-  ; leading : trivia
-  ; trailing : trivia
-}
-
-and trait_method = {
-    name : Musi_shared.Interner.symbol
-  ; params : param list
-  ; ret_typ : typ option
-  ; body : stmt list option
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
@@ -189,17 +171,19 @@ and import_item = {
   ; span : Musi_shared.Span.t
 }
 
-(** Declaration node kinds *)
 and decl_kind =
   | Func of {
         name : Musi_shared.Interner.symbol
       ; params : param list
       ; ret_typ : typ option
-      ; body : stmt list
+      ; body : stmt list option
     }
-  | Record of { name : Musi_shared.Interner.symbol; fields : record_field list }
-  | Choice of { name : Musi_shared.Interner.symbol; cases : choice_case list }
-  | Trait of { name : Musi_shared.Interner.symbol; methods : trait_method list }
+  | Record of { name : Musi_shared.Interner.symbol; fields : field list }
+  | Choice of {
+        name : Musi_shared.Interner.symbol
+      ; members : choice_member list
+    }
+  | Trait of { name : Musi_shared.Interner.symbol; methods : decl list }
   | Alias of { name : Musi_shared.Interner.symbol; typ : typ }
   | Import of {
         path : Musi_shared.Interner.symbol
@@ -209,7 +193,6 @@ and decl_kind =
   | Extern of { abi : Musi_shared.Interner.symbol option; decls : decl list }
   | Error
 
-(** Declaration AST node *)
 and decl = {
     kind : decl_kind
   ; span : Musi_shared.Span.t
@@ -219,5 +202,4 @@ and decl = {
   ; mutable sym : symbol_ref option
 }
 
-(** Complete program *)
 type program = decl list
