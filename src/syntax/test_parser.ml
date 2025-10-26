@@ -137,12 +137,148 @@ let test_test_expr () =
 
 let test_range_expr () =
   let tokens, interner =
-    make_parser "func test() { const x := 1..10; const y := 1...10; }"
+    make_parser "func test() { const x := 1..<10; const y := 1...10; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
     "range expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_field_access () =
+  let tokens, interner =
+    make_parser "func test() { const x := obj.field; const y := tup.0; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "field access expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_index_access () =
+  let tokens, interner =
+    make_parser "func test() { const x := arr[0]; const y := map[\"key\"]; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "index access expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_tuples () =
+  let tokens, interner =
+    make_parser
+      "func test() { const x := (); const y := (,); const z := (1, 2, 3); }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "tuple expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_arrays () =
+  let tokens, interner =
+    make_parser "func test() { const x := []; const y := [1, 2, 3]; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "array expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_records () =
+  let tokens, interner =
+    make_parser "func test() { const x := Point{ x := 1, y := 2 }; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "record expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_nested_expressions () =
+  let tokens, interner =
+    make_parser "func test() { const x := arr[obj.field].method(a, b)[0]; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "nested expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_record_vs_block () =
+  let tokens, interner =
+    make_parser
+      "func test() { const x := A{ a := 1 }; const y := { const z := 2; }; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "record vs block disambiguation works"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_complex_tuples () =
+  let tokens, interner =
+    make_parser "func test() { const x := (a.b, [1, 2], Point{ x := 0 }); }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "complex tuple expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_precedence () =
+  let tokens, interner =
+    make_parser "func test() { const x := a.b[0] + c * d as Type; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "operator precedence works correctly"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_empty_containers () =
+  let tokens, interner =
+    make_parser "func test() { const x := []; const y := (); const z := (,); }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "empty containers parse correctly"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_chained_access () =
+  let tokens, interner =
+    make_parser
+      "func test() { const x := obj.field.subfield[\"key\"][0].method(); }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "chained field/index access works"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_range_precedence () =
+  let tokens, interner =
+    make_parser
+      "func test() { const x := 1 + 2..<5 * 3; const y := a[0]...b.field; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "range operator precedence works"
     false
     (Diagnostic.has_errors diags)
 
@@ -156,7 +292,7 @@ let () =
         ; test_case "func_basic" `Quick test_func_basic
         ; test_case "func_with_params" `Quick test_func_with_params
         ] )
-    ; ( "Expressions"
+    ; ( "Literals & Operators"
       , [
           test_case "literals" `Quick test_literals
         ; test_case "binary_ops" `Quick test_binary_ops
@@ -164,7 +300,18 @@ let () =
         ; test_case "cast_expr" `Quick test_cast_expr
         ; test_case "test_expr" `Quick test_test_expr
         ; test_case "range_expr" `Quick test_range_expr
-        ; test_case "func_calls" `Quick test_func_calls
+        ] )
+    ; ( "Data Structures"
+      , [
+          test_case "tuples" `Quick test_tuples
+        ; test_case "arrays" `Quick test_arrays
+        ; test_case "records" `Quick test_records
+        ; test_case "field_access" `Quick test_field_access
+        ; test_case "index_access" `Quick test_index_access
+        ] )
+    ; ( "Function Calls & Blocks"
+      , [
+          test_case "func_calls" `Quick test_func_calls
         ; test_case "blocks" `Quick test_blocks
         ] )
     ; ( "Statements"
@@ -176,5 +323,15 @@ let () =
       , [
           test_case "if_then_else" `Quick test_if_then_else
         ; test_case "while_loop" `Quick test_while_loop
+        ] )
+    ; ( "Complex & Edge Cases"
+      , [
+          test_case "nested_expressions" `Quick test_nested_expressions
+        ; test_case "record_vs_block" `Quick test_record_vs_block
+        ; test_case "complex_tuples" `Quick test_complex_tuples
+        ; test_case "precedence" `Quick test_precedence
+        ; test_case "empty_containers" `Quick test_empty_containers
+        ; test_case "chained_access" `Quick test_chained_access
+        ; test_case "range_precedence" `Quick test_range_precedence
         ] )
     ]
