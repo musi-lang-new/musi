@@ -31,6 +31,7 @@ type t =
   | KwBreak
   | KwCase
   | KwChoice
+  | KwConst
   | KwContinue
   | KwDefer
   | KwElse
@@ -44,7 +45,6 @@ type t =
   | KwImport
   | KwIn
   | KwIs
-  | KwLet
   | KwMatch
   | KwMod
   | KwNot
@@ -145,6 +145,7 @@ let kind_to_string interner = function
   | KwBreak -> "break"
   | KwCase -> "case"
   | KwChoice -> "choice"
+  | KwConst -> "const"
   | KwContinue -> "continue"
   | KwDefer -> "defer"
   | KwElse -> "else"
@@ -158,7 +159,6 @@ let kind_to_string interner = function
   | KwImport -> "import"
   | KwIn -> "in"
   | KwIs -> "is"
-  | KwLet -> "let"
   | KwMatch -> "match"
   | KwMod -> "mod"
   | KwNot -> "not"

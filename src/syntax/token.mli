@@ -33,6 +33,7 @@ type t =
   | KwBreak
   | KwCase
   | KwChoice
+  | KwConst
   | KwContinue
   | KwDefer
   | KwElse
@@ -46,7 +47,6 @@ type t =
   | KwImport
   | KwIn
   | KwIs
-  | KwLet
   | KwMatch
   | KwMod
   | KwNot
