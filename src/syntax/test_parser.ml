@@ -38,14 +38,14 @@ let test_func_with_params () =
 let test_literals () =
   let tokens, interner =
     make_parser
-      "func test() { let x := 42; let y := true; let z := \"hello\"; }"
+      "func test() { const x := 42; const y := true; const z := \"hello\"; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "literals parse without errors" false (Diagnostic.has_errors diags)
 
 let test_binary_ops () =
   let tokens, interner =
-    make_parser "func test() { let x := 1 + 2 * 3; let y := x < 5; }"
+    make_parser "func test() { const x := 1 + 2 * 3; const y := x < 5; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -72,19 +72,19 @@ let test_while_loop () =
     false
     (Diagnostic.has_errors diags)
 
-let test_let_var_bindings () =
+let test_bindings () =
   let tokens, interner =
-    make_parser "func test() { let x := 42; var y := 0; y <- 1; }"
+    make_parser "func test() { const x := 42; var y := 0; y <- 1; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
-    "let/var bindings parse without errors"
+    "const/var bindings parse without errors"
     false
     (Diagnostic.has_errors diags)
 
 let test_func_calls () =
-  let tokens, interner = make_parser "func test() { let x := add(1, 2); }" in
+  let tokens, interner = make_parser "func test() { const x := add(1, 2); }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -93,7 +93,7 @@ let test_func_calls () =
     (Diagnostic.has_errors diags)
 
 let test_blocks () =
-  let tokens, interner = make_parser "func test() { { let x := 1; } }" in
+  let tokens, interner = make_parser "func test() { { const x := 1; } }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "blocks parse without errors" false (Diagnostic.has_errors diags)
 
@@ -108,12 +108,41 @@ let test_return_stmt () =
 
 let test_unary_ops () =
   let tokens, interner =
-    make_parser "func test() { let x := -42; let y := not true; }"
+    make_parser "func test() { const x := -42; const y := not true; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
     "unary operations parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_cast_expr () =
+  let tokens, interner = make_parser "func test() { const x := 42 as Nat; }" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "cast expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_test_expr () =
+  let tokens, interner = make_parser "func test() { const x := 42 is Nat; }" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "test expressions parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_range_expr () =
+  let tokens, interner =
+    make_parser "func test() { const x := 1..10; const y := 1...10; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "range expressions parse without errors"
     false
     (Diagnostic.has_errors diags)
 
@@ -132,12 +161,15 @@ let () =
           test_case "literals" `Quick test_literals
         ; test_case "binary_ops" `Quick test_binary_ops
         ; test_case "unary_ops" `Quick test_unary_ops
+        ; test_case "cast_expr" `Quick test_cast_expr
+        ; test_case "test_expr" `Quick test_test_expr
+        ; test_case "range_expr" `Quick test_range_expr
         ; test_case "func_calls" `Quick test_func_calls
         ; test_case "blocks" `Quick test_blocks
         ] )
     ; ( "Statements"
       , [
-          test_case "let_var_bindings" `Quick test_let_var_bindings
+          test_case "bindings" `Quick test_bindings
         ; test_case "return_stmt" `Quick test_return_stmt
         ] )
     ; ( "Control Flow"
