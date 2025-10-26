@@ -215,7 +215,7 @@ and parse_if_expr t start leading : Tree.expr =
 and parse_stmt t : Tree.stmt =
   let leading = collect_trivia t in
   match (Token.curr t.stream).kind with
-  | Token.KwLet -> parse_bind_stmt t false leading
+  | Token.KwConst -> parse_bind_stmt t false leading
   | Token.KwVar -> parse_bind_stmt t true leading
   | Token.KwReturn -> parse_return_stmt t leading
   | Token.KwWhile -> parse_while_stmt t leading
