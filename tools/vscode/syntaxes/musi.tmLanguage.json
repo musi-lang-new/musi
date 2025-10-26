@@ -231,7 +231,7 @@
                 },
                 {
                     "name": "variable.other.constant.musi",
-                    "match": "\\b(?:let\\s+)?[A-Z][A-Z0-9_]*[A-Z][A-Z0-9_]*\\b"
+                    "match": "\\b(?:const\\s+)?[A-Z][A-Z0-9_]*[A-Z][A-Z0-9_]*\\b"
                 },
                 {
                     "name": "entity.name.function.call.musi",
@@ -259,7 +259,7 @@
                 },
                 {
                     "name": "storage.type.musi",
-                    "match": "\\b(alias|choice|func|let|record|trait|var)\\b"
+                    "match": "\\b(alias|choice|const|func|record|trait|var)\\b"
                 },
                 {
                     "name": "storage.modifier.musi",
