@@ -219,12 +219,17 @@ and parse_stmt t : Tree.stmt =
   | Token.KwVar -> parse_bind_stmt t true leading
   | Token.KwReturn -> parse_return_stmt t leading
   | Token.KwWhile -> parse_while_stmt t leading
+  | Token.KwFunc -> parse_decl_stmt t leading
   | _ ->
     let expr = parse_expr_bp t 0 in
     if (curr t).kind = Token.LtMinus then parse_assign_stmt t expr leading
     else make_stmt (Tree.Expr { expr }) expr.span leading
 
-and parse_bind_stmt t mut leading : Tree.stmt =
+and parse_decl_stmt t leading : Tree.stmt =
+  let decl = parse_func_decl t in
+  make_stmt (Tree.Decl { decl }) decl.span leading
+
+and parse_bind_stmt t mutable_ leading : Tree.stmt =
   let start = (Token.curr t.stream).span in
   Token.advance t.stream;
   let name =
@@ -236,7 +241,7 @@ and parse_bind_stmt t mut leading : Tree.stmt =
       error t "expected identifier" (curr t).span;
       Musi_shared.Interner.intern t.interner "<error>"
   in
-  let ty =
+  let typ =
     if (curr t).kind = Token.Colon then (
       advance t;
       Some (parse_ty t))
@@ -245,7 +250,7 @@ and parse_bind_stmt t mut leading : Tree.stmt =
   let _ = expect t Token.ColonEq in
   let init = parse_expr t in
   let span = make_span_from_to start init.span in
-  make_stmt (Tree.Bind { mut; name; typ = ty; init }) span leading
+  make_stmt (Tree.Bind { mutable_; name; typ; init }) span leading
 
 and parse_assign_stmt t lhs leading : Tree.stmt =
   let start = lhs.span in
