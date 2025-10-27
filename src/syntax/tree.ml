@@ -1,37 +1,14 @@
 type trivia = Token.token list
-
-type modifier_set = {
-    exportness : bool
-  ; externness : bool * Musi_shared.Interner.symbol option
-  ; unsafeness : bool
-  ; constness : bool
-  ; asyncness : bool
-}
-
-let empty_modifier_set =
-  {
-    exportness = false
-  ; externness = (false, None)
-  ; unsafeness = false
-  ; constness = false
-  ; asyncness = false
-  }
-
 type typ_ref = int
 type symbol_ref = int
 
-type constraint_ = {
-    trait : Musi_shared.Interner.symbol
-  ; args : typ list
-  ; span : Musi_shared.Span.t
-}
-
-and typ_kind =
+type typ_kind =
   | Named of { name : Musi_shared.Interner.symbol }
   | Func of { param_typs : typ list; ret_typ : typ }
   | Optional of { inner_typ : typ }
   | Fallible of { pass_typ : typ; fail_typ : typ option }
   | Array of { elem_typ : typ }
+  | ArrayRepeat of { elem_typ : typ; count_typ : typ }
   | Tuple of { elem_typs : typ list }
   | Generic of { name : Musi_shared.Interner.symbol; args : typ list }
   | Where of { typ : typ; constraints : constraint_ list }
@@ -43,7 +20,6 @@ and typ = {
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
-  ; modifiers : modifier_set
 }
 
 and pat_kind =
@@ -95,8 +71,24 @@ and expr_kind =
   | Match of { expr : expr; cases : match_case list }
   | Block of { stmts : stmt list }
   | Array of { elems : expr list }
+  | ArrayRepeat of { elem : expr; count : expr }
   | Tuple of { elems : expr list }
-  | Record of { fields : (Musi_shared.Interner.symbol * expr) list }
+  | RecordLiteral of { fields : (Musi_shared.Interner.symbol * expr) list }
+  | RecordExpr of { fields : field list; methods : stmt list }
+  | ChoiceExpr of { cases : choice_case list; methods : stmt list }
+  | TraitExpr of { methods : stmt list }
+  | FuncExpr of {
+        params : param list
+      ; ret_typ : typ option
+      ; body : stmt list option
+    }
+  | Bind of { mutable_ : bool; pat : pat; typ : typ option; init : expr }
+  | Assign of { lhs : expr; rhs : expr }
+  | Return of { value : expr option }
+  | Break of { value : expr option }
+  | Continue
+  | While of { cond : expr; body : stmt list }
+  | For of { pat : pat; iter : expr; body : stmt list }
   | FieldAccess of { receiver : expr; field : Musi_shared.Interner.symbol }
   | IndexAccess of { receiver : expr; index : expr }
   | Try of { expr : expr }
@@ -104,7 +96,6 @@ and expr_kind =
   | Range of { start : expr; end_ : expr; inclusive : bool }
   | Async of { expr : expr }
   | Await of { expr : expr }
-  | Closure of { params : param list; ret_typ : typ option; body : expr }
   | Cast of { expr : expr; typ : typ }
   | Test of { expr : expr; typ : typ }
   | Template of { parts : template_part list }
@@ -128,30 +119,15 @@ and match_case = {
   ; trailing : trivia
 }
 
-and stmt_kind =
-  | Expr of { expr : expr }
-  | Decl of { decl : decl }
-  | Bind of {
-        mutable_ : bool
-      ; name : Musi_shared.Interner.symbol
-      ; typ : typ option
-      ; init : expr
-    }
-  | Assign of { name : Musi_shared.Interner.symbol; value : expr }
-  | Return of { value : expr option }
-  | Break of { value : expr option }
-  | Continue
-  | While of { cond : expr; body : stmt list }
-  | For of { pat : pat; iter : expr; body : stmt list }
-  | Defer of { stmt : stmt }
-  | Unsafe of { stmts : stmt list }
-  | Error
+and stmt_kind = ExprStmt of { expr : expr } | Error
 
 and stmt = {
     kind : stmt_kind
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
+  ; decorators : decorator list
+  ; exported : bool
   ; mutable sym : symbol_ref option
 }
 
@@ -164,7 +140,7 @@ and field = {
   ; trailing : trivia
 }
 
-and choice_member = {
+and choice_case = {
     name : Musi_shared.Interner.symbol
   ; typ : typ option
   ; span : Musi_shared.Span.t
@@ -172,32 +148,39 @@ and choice_member = {
   ; trailing : trivia
 }
 
-and import_item = {
+and decorator = {
+    name : Musi_shared.Interner.symbol
+  ; args : expr list
+  ; span : Musi_shared.Span.t
+}
+
+and constraint_ = {
+    trait : Musi_shared.Interner.symbol
+  ; args : typ list
+  ; span : Musi_shared.Span.t
+}
+
+and import_export_item = {
     name : Musi_shared.Interner.symbol
   ; alias : Musi_shared.Interner.symbol option
   ; span : Musi_shared.Span.t
 }
 
-and decl_kind =
-  | Func of {
-        name : Musi_shared.Interner.symbol
-      ; params : param list
-      ; ret_typ : typ option
-      ; body : stmt list option
-    }
-  | Record of { name : Musi_shared.Interner.symbol; fields : field list }
-  | Choice of {
-        name : Musi_shared.Interner.symbol
-      ; members : choice_member list
-    }
-  | Trait of { name : Musi_shared.Interner.symbol; methods : decl list }
-  | Alias of { name : Musi_shared.Interner.symbol; typ : typ }
-  | Import of {
+and import_export_kind =
+  | Namespace of { alias : Musi_shared.Interner.symbol }
+  | Named of { items : import_export_item list }
+  | ReExport of {
         path : Musi_shared.Interner.symbol
-      ; items : import_item list option
+      ; items : import_export_item list option
     }
-  | Export of { decl : decl }
-  | Extern of { abi : Musi_shared.Interner.symbol option; decls : decl list }
+
+and decl_kind =
+  | Import of { path : Musi_shared.Interner.symbol; kind : import_export_kind }
+  | Export of {
+        path : Musi_shared.Interner.symbol option
+      ; kind : import_export_kind
+    }
+  | Alias of { name : Musi_shared.Interner.symbol; typ : typ }
   | Error
 
 and decl = {
@@ -205,7 +188,6 @@ and decl = {
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
-  ; modifiers : modifier_set
   ; mutable sym : symbol_ref option
 }
 
