@@ -96,7 +96,7 @@ let string_literals () =
   check bool "string with hex escapes" true (has_string_token lexer)
 
 let test_operators () =
-  let lexer = make_lexer "+ - * / = < > <= >= =/= <- -> := ..< ..." in
+  let lexer = make_lexer "+ - * / = < > <= >= =/= <- -> := ..< .." in
   let tokens, _diags = Lexer.lex lexer in
   let op_tokens =
     List.filter
@@ -105,7 +105,7 @@ let test_operators () =
         | Token.Plus | Token.Minus | Token.Star | Token.Slash | Token.Eq
         | Token.Lt | Token.Gt | Token.LtEq | Token.GtEq | Token.EqSlashEq
         | Token.LtMinus | Token.MinusGt | Token.ColonEq | Token.DotDotLt
-        | Token.DotDotDot ->
+        | Token.DotDot ->
           true
         | _ -> false)
       tokens
