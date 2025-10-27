@@ -552,8 +552,16 @@ and parse_block_stmts t =
     else
       let expr = parse_expr t in
       let stmt = make_stmt (Tree.ExprStmt { expr }) expr.span [] in
-      if (curr t).kind = Token.Semi then advance t;
-      loop (stmt :: acc)
+
+      let is_last_expr = (curr t).kind = Token.RBrace in
+      if is_last_expr then (
+        if (curr t).kind = Token.Semi then advance t;
+        loop (stmt :: acc))
+      else (
+        if (curr t).kind <> Token.Semi then
+          error t "expected ';' after statement" (curr t).span;
+        advance t;
+        loop (stmt :: acc))
   in
   loop []
 
