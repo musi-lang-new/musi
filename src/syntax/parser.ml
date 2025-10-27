@@ -154,11 +154,11 @@ and parse_primary_expr t : Tree.expr =
   let tok = Token.curr t.stream in
   Token.advance t.stream;
   match tok.kind with
-  | Token.LitInt (s, _) ->
+  | Token.IntLit (s, _) ->
     make_expr (Tree.IntLit { value = s }) tok.span leading
-  | Token.LitFloat (s, _) ->
+  | Token.FloatLit (s, _) ->
     make_expr (Tree.BinLit { value = s }) tok.span leading
-  | Token.LitText sym ->
+  | Token.TextLit sym ->
     make_expr (Tree.TextLit { value = sym }) tok.span leading
   | Token.KwTrue -> make_expr (Tree.BoolLit { value = true }) tok.span leading
   | Token.KwFalse -> make_expr (Tree.BoolLit { value = false }) tok.span leading
@@ -181,7 +181,7 @@ and parse_primary_expr t : Tree.expr =
   | Token.KwAwait -> parse_await_expr t tok.span leading
   | Token.KwFunc -> parse_func_expr t tok.span leading
   | Token.TemplateHead _ -> parse_template_expr t tok.span leading
-  | Token.LitNoSubstTemplate _ -> parse_template_expr t tok.span leading
+  | Token.NoSubstTemplateLit _ -> parse_template_expr t tok.span leading
   | _ ->
     error t "expected expression" tok.span;
     make_expr Tree.Error tok.span leading
@@ -206,7 +206,7 @@ and parse_field_access_expr t (lhs : Tree.expr) =
     | Token.Ident sym ->
       advance t;
       sym
-    | Token.LitInt (s, _) ->
+    | Token.IntLit (s, _) ->
       advance t;
       Musi_shared.Interner.intern t.interner s
     | _ ->
