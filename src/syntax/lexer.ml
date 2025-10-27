@@ -352,7 +352,7 @@ let scan_binary_number t start =
   let text = slice t start in
   check_consecutive_underscores t text start;
   check_numeric_overflow t text start;
-  Token.make (Token.LitInt (text, suffix)) (make_span t start)
+  Token.make (Token.IntLit (text, suffix)) (make_span t start)
 
 let scan_octal_number t start =
   advance_n t 2;
@@ -364,7 +364,7 @@ let scan_octal_number t start =
   let text = slice t start in
   check_consecutive_underscores t text start;
   check_numeric_overflow t text start;
-  Token.make (Token.LitInt (text, suffix)) (make_span t start)
+  Token.make (Token.IntLit (text, suffix)) (make_span t start)
 
 let scan_hex_number t start =
   advance_n t 2;
@@ -374,7 +374,7 @@ let scan_hex_number t start =
   let text = slice t start in
   check_consecutive_underscores t text start;
   check_numeric_overflow t text start;
-  Token.make (Token.LitInt (text, suffix)) (make_span t start)
+  Token.make (Token.IntLit (text, suffix)) (make_span t start)
 
 let scan_number t start =
   if curr_char t = '0' then (
@@ -397,8 +397,8 @@ let scan_number t start =
       check_mixed_separators t text start;
       if not (has_dot || has_exp) then check_numeric_overflow t text start;
       let kind =
-        if has_dot || has_exp then Token.LitFloat (text, suffix)
-        else Token.LitInt (text, suffix)
+        if has_dot || has_exp then Token.FloatLit (text, suffix)
+        else Token.IntLit (text, suffix)
       in
       Token.make kind (make_span t start))
   else (
@@ -415,8 +415,8 @@ let scan_number t start =
     check_mixed_separators t text start;
     if not (has_dot || has_exp) then check_numeric_overflow t text start;
     let kind =
-      if has_dot || has_exp then Token.LitFloat (text, suffix)
-      else Token.LitInt (text, suffix)
+      if has_dot || has_exp then Token.FloatLit (text, suffix)
+      else Token.IntLit (text, suffix)
     in
     Token.make kind (make_span t start))
 
@@ -444,7 +444,7 @@ let scan_text_lit t start =
   else advance t;
   let text = Buffer.contents buf in
   Token.make
-    (Token.LitText (Musi_shared.Interner.intern t.interner text))
+    (Token.TextLit (Musi_shared.Interner.intern t.interner text))
     (make_span t start)
 
 let scan_rune_lit t start =
@@ -464,7 +464,7 @@ let scan_rune_lit t start =
     in
     if curr_char t <> '\'' then error t "unterminated rune literal" start
     else advance t;
-    Token.make (Token.LitRune (Char.code c)) (make_span t start)
+    Token.make (Token.RuneLit (Char.code c)) (make_span t start)
 
 let scan_template_lit t start =
   advance t;
@@ -494,7 +494,7 @@ let scan_template_lit t start =
       advance t;
       let content = Buffer.contents buf in
       Token.make
-        (Token.LitNoSubstTemplate
+        (Token.NoSubstTemplateLit
            (Musi_shared.Interner.intern t.interner content))
         (make_span t start))
     else (
