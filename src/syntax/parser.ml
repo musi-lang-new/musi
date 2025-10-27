@@ -60,19 +60,24 @@ let make_expr (kind : Tree.expr_kind) span leading : Tree.expr =
   { Tree.kind; span; leading; trailing = []; typ = None; sym = None }
 
 let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
-  { Tree.kind; span; leading; trailing = []; sym = None }
-
-let make_typ (kind : Tree.typ_kind) span leading : Tree.typ =
   {
     Tree.kind
   ; span
   ; leading
   ; trailing = []
-  ; modifiers = Tree.empty_modifier_set
+  ; decorators = []
+  ; exported = false
+  ; sym = None
   }
 
-let make_decl (kind : Tree.decl_kind) span leading modifiers : Tree.decl =
-  { Tree.kind; span; leading; trailing = []; sym = None; modifiers }
+let make_typ (kind : Tree.typ_kind) span leading : Tree.typ =
+  { Tree.kind; span; leading; trailing = [] }
+
+let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
+  { Tree.kind; span; leading; trailing = []; sym = None }
+
+let make_pat (kind : Tree.pat_kind) span leading : Tree.pat =
+  { Tree.kind; span; leading; trailing = []; typ = None }
 
 let error t msg span =
   t.diags :=
@@ -87,39 +92,6 @@ let expect t kind =
   else (
     error t "expected token" (curr t).span;
     false)
-
-(* ========================================
-   MODIFIER PARSING
-   ======================================== *)
-
-let parse_modifiers t =
-  let rec loop modifiers =
-    match (curr t).kind with
-    | Token.KwExport ->
-      advance t;
-      loop { modifiers with Tree.exportness = true }
-    | Token.KwExtern ->
-      advance t;
-      let abi =
-        match (curr t).kind with
-        | Token.LitText sym ->
-          advance t;
-          Some sym
-        | _ -> None
-      in
-      loop { modifiers with Tree.externness = (true, abi) }
-    | Token.KwUnsafe ->
-      advance t;
-      loop { modifiers with Tree.unsafeness = true }
-    | Token.KwConst ->
-      advance t;
-      loop { modifiers with Tree.constness = true }
-    | Token.KwAsync ->
-      advance t;
-      loop { modifiers with Tree.asyncness = true }
-    | _ -> modifiers
-  in
-  loop Tree.empty_modifier_set
 
 (* ========================================
    PRECEDENCE & OPERATORS
@@ -144,7 +116,7 @@ let infix_bp = function
   | Token.Dot | Token.LBracket -> Some (15, 16)
   | Token.Star | Token.Slash -> Some (11, 12)
   | Token.Plus | Token.Minus -> Some (9, 10)
-  | Token.DotDotLt | Token.DotDotDot -> Some (7, 8)
+  | Token.DotDotLt | Token.DotDot -> Some (7, 8)
   | Token.Lt | Token.Gt | Token.LtEq | Token.GtEq | Token.Eq -> Some (5, 6)
   | Token.KwAs | Token.KwIs -> Some (3, 4)
   | _ -> None
@@ -164,12 +136,17 @@ and parse_expr_bp t min_bp : Tree.expr =
   parse_infix_expr t lhs min_bp
 
 and parse_ident_expr t sym tok_span leading =
-  if (curr t).kind = Token.LBrace then (
+  if (curr t).kind = Token.Dot then (
     advance t;
-    let fields = parse_record_fields t in
-    let _ = expect t Token.RBrace in
-    let span = make_span_to_curr t tok_span in
-    make_expr (Tree.Record { fields }) span leading)
+    if (curr t).kind = Token.LBrace then (
+      advance t;
+      let fields = parse_record_fields t in
+      let _ = expect t Token.RBrace in
+      let span = make_span_to_curr t tok_span in
+      make_expr (Tree.RecordLiteral { fields }) span leading)
+    else (
+      error t "expected { after ." (curr t).span;
+      make_expr (Tree.Ident { name = sym }) tok_span leading))
   else make_expr (Tree.Ident { name = sym }) tok_span leading
 
 and parse_primary_expr t : Tree.expr =
@@ -189,17 +166,23 @@ and parse_primary_expr t : Tree.expr =
   | Token.LParen -> parse_paren_or_tuple_expr t tok.span leading
   | Token.LBracket -> parse_array_expr t tok.span leading
   | Token.LBrace -> parse_block_expr t tok.span leading
+  | Token.KwConst -> parse_bind_expr t false tok.span leading
+  | Token.KwVar -> parse_bind_expr t true tok.span leading
+  | Token.KwReturn -> parse_return_expr t tok.span leading
+  | Token.KwBreak -> parse_break_expr t tok.span leading
+  | Token.KwContinue -> parse_continue_expr tok.span leading
+  | Token.KwWhile -> parse_while_expr t tok.span leading
+  | Token.KwFor -> parse_for_expr t tok.span leading
   | Token.KwIf -> parse_if_expr t tok.span leading
   | Token.KwMatch -> parse_match_expr t tok.span leading
   | Token.KwTry -> parse_try_expr t tok.span leading
   | Token.KwDefer -> parse_defer_expr t tok.span leading
   | Token.KwAsync -> parse_async_expr t tok.span leading
   | Token.KwAwait -> parse_await_expr t tok.span leading
+  | Token.KwFunc -> parse_func_expr t tok.span leading
   | Token.TemplateHead _ -> parse_template_expr t tok.span leading
   | Token.LitNoSubstTemplate _ -> parse_template_expr t tok.span leading
   | _ ->
-    let _ = parse_unit_lit_expr t tok.span leading in
-    let _ = parse_closure_expr t tok.span leading in
     error t "expected expression" tok.span;
     make_expr Tree.Error tok.span leading
 
@@ -267,7 +250,7 @@ and parse_infix_expr t lhs min_bp =
           match op with
           | Token.DotDotLt ->
             (Tree.Range { start = lhs; end_ = rhs; inclusive = false }, span)
-          | Token.DotDotDot ->
+          | Token.DotDot ->
             (Tree.Range { start = lhs; end_ = rhs; inclusive = true }, span)
           | _ -> (Tree.Binary { op; lhs; rhs }, span))
       in
@@ -342,13 +325,40 @@ and parse_if_expr t start leading : Tree.expr =
   let then_br = make_expr (Tree.Block { stmts = then_stmts }) span [] in
   make_expr (Tree.If { cond; then_br; else_br }) span leading
 
-and parse_unit_lit_expr t start leading : Tree.expr =
-  error t "unit literal expressions not implemented" start;
-  make_expr Tree.UnitLit start leading
-
 and parse_match_expr t start leading : Tree.expr =
-  error t "match expressions not implemented" start;
-  make_expr Tree.Error start leading
+  let expr = parse_expr t in
+  let _ = expect t Token.LBrace in
+  let cases = parse_match_cases t in
+  let _ = expect t Token.RBrace in
+  let span = make_span_to_curr t start in
+  make_expr (Tree.Match { expr; cases }) span leading
+
+and parse_match_cases t =
+  let rec loop acc =
+    if (curr t).kind = Token.RBrace || (curr t).kind = Token.Eof then
+      List.rev acc
+    else
+      let case = parse_match_case t in
+      loop (case :: acc)
+  in
+  loop []
+
+and parse_match_case t : Tree.match_case =
+  let leading = collect_trivia t in
+  let start = (curr t).span in
+  let _ = expect t Token.KwCase in
+  let pat = parse_pat t in
+  let guard =
+    if (curr t).kind = Token.KwIf then (
+      advance t;
+      Some (parse_expr t))
+    else None
+  in
+  let _ = expect t Token.MinusGt in
+  let body = parse_expr t in
+  let _ = if (curr t).kind = Token.Comma then advance t in
+  let span = make_span_from_to start body.span in
+  { Tree.pat; guard; body; span; leading; trailing = [] }
 
 and parse_array_expr t start leading : Tree.expr =
   let elems = parse_separated parse_expr Token.Comma Token.RBracket t in
@@ -361,251 +371,21 @@ and parse_try_expr t start leading : Tree.expr =
   make_expr Tree.Error start leading
 
 and parse_defer_expr t start leading : Tree.expr =
-  error t "defer expressions not implemented" start;
-  make_expr Tree.Error start leading
+  let expr = parse_expr t in
+  let span = make_span_from_to start expr.span in
+  make_expr (Tree.Defer { expr }) span leading
 
 and parse_async_expr t start leading : Tree.expr =
-  error t "async expressions not implemented" start;
-  make_expr Tree.Error start leading
+  let expr = parse_expr t in
+  let span = make_span_from_to start expr.span in
+  make_expr (Tree.Async { expr }) span leading
 
 and parse_await_expr t start leading : Tree.expr =
-  error t "await expressions not implemented" start;
-  make_expr Tree.Error start leading
+  let expr = parse_expr t in
+  let span = make_span_from_to start expr.span in
+  make_expr (Tree.Await { expr }) span leading
 
-and parse_closure_expr t start leading : Tree.expr =
-  error t "closure expressions not implemented" start;
-  make_expr Tree.Error start leading
-
-and parse_template_expr t start leading : Tree.expr =
-  error t "template expressions not implemented" start;
-  make_expr Tree.Error start leading
-
-(* ========================================
-   STATEMENT PARSING
-   ======================================== *)
-
-and parse_stmt t : Tree.stmt =
-  let leading = collect_trivia t in
-  match (Token.curr t.stream).kind with
-  | Token.KwConst -> parse_bind_stmt t false leading
-  | Token.KwVar -> parse_bind_stmt t true leading
-  | Token.KwReturn -> parse_return_stmt t leading
-  | Token.KwBreak -> parse_break_stmt t leading
-  | Token.KwContinue -> parse_continue_stmt t leading
-  | Token.KwFor -> parse_for_stmt t leading
-  | Token.KwWhile -> parse_while_stmt t leading
-  | Token.KwFunc -> parse_decl_stmt t leading
-  | Token.KwUnsafe -> parse_unsafe_stmt t leading
-  | Token.KwDefer -> parse_defer_stmt t leading
-  | _ ->
-    let expr = parse_expr_bp t 0 in
-    if (curr t).kind = Token.LtMinus then parse_assign_stmt t expr leading
-    else make_stmt (Tree.Expr { expr }) expr.span leading
-
-and parse_decl_stmt t leading : Tree.stmt =
-  let modifiers = parse_modifiers t in
-  let decl = parse_func_decl_with_modifiers t modifiers in
-  make_stmt (Tree.Decl { decl }) decl.span leading
-
-and parse_unsafe_stmt t leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  let _ = expect t Token.LBrace in
-  let stmts = parse_block_stmts t in
-  let _ = expect t Token.RBrace in
-  let span = make_span_to_curr t start in
-  make_stmt (Tree.Unsafe { stmts }) span leading
-
-and parse_bind_stmt t mutable_ leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  let name =
-    match (curr t).kind with
-    | Token.Ident sym ->
-      advance t;
-      sym
-    | _ ->
-      error t "expected identifier" (curr t).span;
-      Musi_shared.Interner.intern t.interner "<error>"
-  in
-  let typ =
-    if (curr t).kind = Token.Colon then (
-      advance t;
-      Some (parse_ty t))
-    else None
-  in
-  let _ = expect t Token.ColonEq in
-  let init = parse_expr t in
-  let span = make_span_from_to start init.span in
-  make_stmt (Tree.Bind { mutable_; name; typ; init }) span leading
-
-and parse_assign_stmt t lhs leading : Tree.stmt =
-  let start = lhs.span in
-  advance t;
-  let name =
-    match lhs.kind with
-    | Tree.Ident { name } -> name
-    | _ ->
-      error t "expression is not assignable" start;
-      Musi_shared.Interner.intern t.interner "<error>"
-  in
-  let rhs = parse_expr t in
-  let span = make_span_from_to start rhs.span in
-  make_stmt (Tree.Assign { name; value = rhs }) span leading
-
-and parse_return_stmt t leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  let value =
-    if (curr t).kind = Token.Semi then None else Some (parse_expr t)
-  in
-  let _ = expect t Token.Semi in
-  let span =
-    match value with Some e -> make_span_from_to start e.span | None -> start
-  in
-  make_stmt (Tree.Return { value }) span leading
-
-and parse_while_stmt t leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  let cond = parse_expr t in
-  let _ = expect t Token.LBrace in
-  let body = parse_block_stmts t in
-  let _ = expect t Token.RBrace in
-  let span = make_span_to_curr t start in
-  make_stmt (Tree.While { cond; body }) span leading
-
-and parse_break_stmt t leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "break statements not implemented" start;
-  make_stmt Tree.Error start leading
-
-and parse_continue_stmt t leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "continue statements not implemented" start;
-  make_stmt Tree.Error start leading
-
-and parse_for_stmt t leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "for statements not implemented" start;
-  make_stmt Tree.Error start leading
-
-and parse_defer_stmt t leading : Tree.stmt =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "defer statements not implemented" start;
-  make_stmt Tree.Error start leading
-
-and parse_block_stmts t =
-  let rec loop acc =
-    if (curr t).kind = Token.RBrace || (curr t).kind = Token.Eof then
-      List.rev acc
-    else
-      let stmt = parse_stmt t in
-      if (curr t).kind = Token.Semi then advance t;
-      loop (stmt :: acc)
-  in
-  loop []
-
-and parse_ty t : Tree.typ =
-  let leading = collect_trivia t in
-  let tok = Token.curr t.stream in
-  Token.advance t.stream;
-  let kind =
-    match tok.kind with
-    | Token.Ident sym -> Tree.Named { name = sym }
-    | _ ->
-      error t "expected type" tok.span;
-      Tree.Error
-  in
-  make_typ kind tok.span leading
-
-(* ========================================
-   DECLARATION PARSING
-   ======================================== *)
-
-and parse_func_decl t : Tree.decl =
-  parse_func_decl_with_modifiers t Tree.empty_modifier_set
-
-and parse_extern_decl t modifiers : Tree.decl =
-  let leading = collect_trivia t in
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  let abi =
-    match (curr t).kind with
-    | Token.LitText sym ->
-      advance t;
-      Some sym
-    | _ -> None
-  in
-  let _ = expect t Token.LBrace in
-  let decls = parse_extern_block t in
-  let _ = expect t Token.RBrace in
-  let span = make_span_to_curr t start in
-  make_decl (Tree.Extern { abi; decls }) span leading modifiers
-
-and parse_extern_block t =
-  let rec loop acc =
-    if (curr t).kind = Token.RBrace || (curr t).kind = Token.Eof then
-      List.rev acc
-    else
-      let decl = parse_func_decl t in
-      loop (decl :: acc)
-  in
-  loop []
-
-and parse_record_decl t modifiers : Tree.decl =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "record declarations not implemented" start;
-  make_decl Tree.Error start [] modifiers
-
-and parse_choice_decl t modifiers : Tree.decl =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "choice declarations not implemented" start;
-  make_decl Tree.Error start [] modifiers
-
-and parse_trait_decl t modifiers : Tree.decl =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "trait declarations not implemented" start;
-  make_decl Tree.Error start [] modifiers
-
-and parse_alias_decl t modifiers : Tree.decl =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "alias declarations not implemented" start;
-  make_decl Tree.Error start [] modifiers
-
-and parse_import_decl t modifiers : Tree.decl =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "import declarations not implemented" start;
-  make_decl Tree.Error start [] modifiers
-
-and parse_export_decl t modifiers : Tree.decl =
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  error t "export declarations not implemented" start;
-  make_decl Tree.Error start [] modifiers
-
-and parse_func_decl_with_modifiers t modifiers : Tree.decl =
-  let leading = collect_trivia t in
-  let start = (Token.curr t.stream).span in
-  Token.advance t.stream;
-  let name =
-    match (curr t).kind with
-    | Token.Ident sym ->
-      advance t;
-      sym
-    | _ ->
-      error t "expected identifier" (curr t).span;
-      Musi_shared.Interner.intern t.interner "<error>"
-  in
+and parse_func_expr t start leading : Tree.expr =
   let _ = expect t Token.LParen in
   let params = parse_params t in
   let _ = expect t Token.RParen in
@@ -621,12 +401,211 @@ and parse_func_decl_with_modifiers t modifiers : Tree.decl =
       let stmts = parse_block_stmts t in
       let _ = expect t Token.RBrace in
       Some stmts)
-    else
-      let _ = expect t Token.Semi in
-      None
+    else None
   in
   let span = make_span_to_curr t start in
-  make_decl (Tree.Func { name; params; ret_typ; body }) span leading modifiers
+  make_expr (Tree.FuncExpr { params; ret_typ; body }) span leading
+
+and parse_template_expr t start leading : Tree.expr =
+  error t "template expressions not implemented" start;
+  make_expr Tree.Error start leading
+
+(* ========================================
+   DECORATOR & MODIFIER PARSING
+   ======================================== *)
+
+and parse_decorators t =
+  let rec loop acc =
+    match (curr t).kind with
+    | Token.At ->
+      advance t;
+      let start = (curr t).span in
+      let name =
+        match (curr t).kind with
+        | Token.Ident sym ->
+          advance t;
+          sym
+        | _ ->
+          error t "expected decorator name" (curr t).span;
+          Musi_shared.Interner.intern t.interner "<error>"
+      in
+      let args, span =
+        if (curr t).kind = Token.LParen then (
+          advance t;
+          let args = parse_separated parse_expr Token.Comma Token.RParen t in
+          let _ = expect t Token.RParen in
+          (args, make_span_to_curr t start))
+        else ([], make_span_to_curr t start)
+      in
+      let decorator = { Tree.name; args; span } in
+      loop (decorator :: acc)
+    | _ -> List.rev acc
+  in
+  loop []
+
+and is_exported t =
+  if (curr t).kind = Token.KwExport then (
+    advance t;
+    true)
+  else false
+
+(* ========================================
+   STATEMENT PARSING
+   ======================================== *)
+
+and parse_stmt t : Tree.stmt =
+  let leading = collect_trivia t in
+  let decorators = parse_decorators t in
+  let exported = is_exported t in
+  let start = (Token.curr t.stream).span in
+  let kind =
+    match (Token.curr t.stream).kind with
+    | Token.KwFunc | Token.KwRecord | Token.KwChoice | Token.KwTrait
+    | Token.KwAlias ->
+      error t "declarations not yet implemented in statement context" start;
+      Tree.ExprStmt { expr = make_expr Tree.Error start [] }
+    | _ ->
+      let expr = parse_expr_bp t 0 in
+      Tree.ExprStmt { expr }
+  in
+  let stmt = make_stmt kind start leading in
+  { stmt with decorators; exported }
+
+and parse_bind_expr t mutable_ start leading : Tree.expr =
+  let pat = parse_pat t in
+  let typ =
+    if (curr t).kind = Token.Colon then (
+      advance t;
+      Some (parse_ty t))
+    else None
+  in
+  let _ = expect t Token.ColonEq in
+  let init = parse_expr t in
+  let span = make_span_from_to start init.span in
+  make_expr (Tree.Bind { mutable_; pat; typ; init }) span leading
+
+and parse_assign_expr t lhs start leading : Tree.expr =
+  advance t;
+  let rhs = parse_expr t in
+  let span = make_span_from_to start rhs.span in
+  make_expr (Tree.Assign { lhs; rhs }) span leading
+
+and parse_return_expr t start leading : Tree.expr =
+  let value =
+    if (curr t).kind = Token.Semi || (curr t).kind = Token.RBrace then None
+    else Some (parse_expr t)
+  in
+  let span =
+    match value with Some e -> make_span_from_to start e.span | None -> start
+  in
+  make_expr (Tree.Return { value }) span leading
+
+and parse_break_expr t start leading : Tree.expr =
+  let value =
+    if (curr t).kind = Token.Semi || (curr t).kind = Token.RBrace then None
+    else Some (parse_expr t)
+  in
+  let span =
+    match value with Some e -> make_span_from_to start e.span | None -> start
+  in
+  make_expr (Tree.Break { value }) span leading
+
+and parse_continue_expr start leading : Tree.expr =
+  make_expr Tree.Continue start leading
+
+and parse_while_expr t start leading : Tree.expr =
+  let cond = parse_expr t in
+  let _ = expect t Token.LBrace in
+  let body = parse_block_stmts t in
+  let _ = expect t Token.RBrace in
+  let span = make_span_to_curr t start in
+  make_expr (Tree.While { cond; body }) span leading
+
+and parse_for_expr t start leading : Tree.expr =
+  let pat = parse_pat t in
+  let _ = expect t Token.KwIn in
+  let iter = parse_expr t in
+  let _ = expect t Token.LBrace in
+  let body = parse_block_stmts t in
+  let _ = expect t Token.RBrace in
+  let span = make_span_to_curr t start in
+  make_expr (Tree.For { pat; iter; body }) span leading
+
+and parse_pat t : Tree.pat =
+  let leading = collect_trivia t in
+  let tok = Token.curr t.stream in
+  Token.advance t.stream;
+  let kind : Tree.pat_kind =
+    match tok.kind with
+    | Token.Ident sym -> Tree.Ident { name = sym }
+    | Token.Underscore -> Tree.Wildcard
+    | _ ->
+      error t "expected pattern" tok.span;
+      Tree.Error
+  in
+  make_pat kind tok.span leading
+
+and parse_block_stmts t =
+  let rec loop acc =
+    if (curr t).kind = Token.RBrace || (curr t).kind = Token.Eof then
+      List.rev acc
+    else
+      let expr = parse_expr t in
+      let stmt = make_stmt (Tree.ExprStmt { expr }) expr.span [] in
+      if (curr t).kind = Token.Semi then advance t;
+      loop (stmt :: acc)
+  in
+  loop []
+
+and parse_ty t : Tree.typ =
+  let leading = collect_trivia t in
+  let tok = Token.curr t.stream in
+  Token.advance t.stream;
+  let kind : Tree.typ_kind =
+    match tok.kind with
+    | Token.Ident sym -> Tree.Named { name = sym }
+    | _ ->
+      error t "expected type" tok.span;
+      Tree.Error
+  in
+  make_typ kind tok.span leading
+
+(* ========================================
+   DECLARATION PARSING
+   ======================================== *)
+
+and parse_import_decl t : Tree.decl =
+  let leading = collect_trivia t in
+  let start = (Token.curr t.stream).span in
+  Token.advance t.stream;
+  error t "import declarations not implemented" start;
+  make_decl Tree.Error start leading
+
+and parse_export_decl t : Tree.decl =
+  let leading = collect_trivia t in
+  let start = (Token.curr t.stream).span in
+  Token.advance t.stream;
+  error t "export declarations not implemented" start;
+  make_decl Tree.Error start leading
+
+and parse_alias_decl t : Tree.decl =
+  let leading = collect_trivia t in
+  let start = (Token.curr t.stream).span in
+  Token.advance t.stream;
+  let name =
+    match (curr t).kind with
+    | Token.Ident sym ->
+      advance t;
+      sym
+    | _ ->
+      error t "expected identifier" (curr t).span;
+      Musi_shared.Interner.intern t.interner "<error>"
+  in
+  let _ = expect t Token.ColonEq in
+  let typ = parse_ty t in
+  let _ = expect t Token.Semi in
+  let span = make_span_to_curr t start in
+  make_decl (Tree.Alias { name; typ }) span leading
 
 and parse_params t = parse_separated parse_param Token.Comma Token.RParen t
 
@@ -656,22 +635,16 @@ let parse_program tokens interner =
   let rec loop acc =
     if (curr t).kind = Token.Eof then List.rev acc
     else
-      let modifiers = parse_modifiers t in
       let decl =
         match (curr t).kind with
-        | Token.KwFunc -> parse_func_decl_with_modifiers t modifiers
-        | Token.KwExtern -> parse_extern_decl t modifiers
-        | Token.KwRecord -> parse_record_decl t modifiers
-        | Token.KwChoice -> parse_choice_decl t modifiers
-        | Token.KwTrait -> parse_trait_decl t modifiers
-        | Token.KwAlias -> parse_alias_decl t modifiers
-        | Token.KwImport -> parse_import_decl t modifiers
-        | Token.KwExport -> parse_export_decl t modifiers
+        | Token.KwImport -> parse_import_decl t
+        | Token.KwExport -> parse_export_decl t
+        | Token.KwAlias -> parse_alias_decl t
         | _ ->
           error t "expected declaration" (curr t).span;
           let span = (curr t).span in
           advance t;
-          make_decl Tree.Error span [] Tree.empty_modifier_set
+          make_decl Tree.Error span []
       in
       loop (decl :: acc)
   in
