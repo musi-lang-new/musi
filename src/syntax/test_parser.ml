@@ -137,7 +137,7 @@ let test_test_expr () =
 
 let test_range_expr () =
   let tokens, interner =
-    make_parser "func test() { const x := 1..<10; const y := 1...10; }"
+    make_parser "func test() { const x := 1..<10; const y := 1..10; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -273,7 +273,7 @@ let test_chained_access () =
 let test_range_precedence () =
   let tokens, interner =
     make_parser
-      "func test() { const x := 1 + 2..<5 * 3; const y := a[0]...b.field; }"
+      "func test() { const x := 1 + 2..<5 * 3; const y := a[0]..b.field; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
