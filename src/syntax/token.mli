@@ -65,6 +65,7 @@ type t =
   | KwWhere
   | KwWhile
   | KwXor
+  | Underscore
   | LParen
   | RParen
   | LBracket
@@ -94,7 +95,7 @@ type t =
   | MinusGt
   | ColonEq
   | DotDotLt
-  | DotDotDot
+  | DotDot
   | Whitespace
   | Newline
   | LineComment of { content : Musi_shared.Interner.symbol }

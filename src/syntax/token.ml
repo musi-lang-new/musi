@@ -63,6 +63,7 @@ type t =
   | KwWhere
   | KwWhile
   | KwXor
+  | Underscore
   | LParen
   | RParen
   | LBracket
@@ -92,7 +93,7 @@ type t =
   | MinusGt
   | ColonEq
   | DotDotLt
-  | DotDotDot
+  | DotDot
   | Whitespace
   | Newline
   | LineComment of { content : Musi_shared.Interner.symbol }
@@ -177,6 +178,7 @@ let kind_to_string interner = function
   | KwWhere -> "where"
   | KwWhile -> "while"
   | KwXor -> "xor"
+  | Underscore -> "_"
   | LParen -> "("
   | RParen -> ")"
   | LBracket -> "["
@@ -206,7 +208,7 @@ let kind_to_string interner = function
   | MinusGt -> "->"
   | ColonEq -> ":="
   | DotDotLt -> "..<"
-  | DotDotDot -> "..."
+  | DotDot -> "..."
   | Whitespace -> "whitespace"
   | Newline -> "newline"
   | LineComment { content } ->
