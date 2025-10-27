@@ -59,13 +59,13 @@ let numeric_literals () =
 
   let lexer = make_lexer "0 123 999_000" in
   let int_count =
-    count_tokens lexer (function Token.LitInt _ -> true | _ -> false)
+    count_tokens lexer (function Token.IntLit _ -> true | _ -> false)
   in
   check int "three integers" 3 int_count;
 
   let lexer = make_lexer "3.14 0.0 123.456_789" in
   let float_count =
-    count_tokens lexer (function Token.LitFloat _ -> true | _ -> false)
+    count_tokens lexer (function Token.FloatLit _ -> true | _ -> false)
   in
   check int "three floats" 3 float_count
 
@@ -74,7 +74,7 @@ let string_literals () =
     let tokens, _diags = Lexer.lex lexer in
     List.exists
       (fun tok ->
-        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
+        match tok.Token.kind with Token.TextLit _ -> true | _ -> false)
       tokens
   in
 
@@ -83,7 +83,7 @@ let string_literals () =
   let string_count =
     List.fold_left
       (fun acc tok ->
-        match tok.Token.kind with Token.LitText _ -> acc + 1 | _ -> acc)
+        match tok.Token.kind with Token.TextLit _ -> acc + 1 | _ -> acc)
       0
       tokens
   in
@@ -195,7 +195,7 @@ let test_unicode_escapes_braced () =
   match
     List.find_opt
       (fun tok ->
-        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
+        match tok.Token.kind with Token.TextLit _ -> true | _ -> false)
       tokens
   with
   | Some _ -> ()
@@ -207,7 +207,7 @@ let test_unicode_escapes_fixed () =
   match
     List.find_opt
       (fun tok ->
-        match tok.Token.kind with Token.LitText _ -> true | _ -> false)
+        match tok.Token.kind with Token.TextLit _ -> true | _ -> false)
       tokens
   with
   | Some _ -> ()
@@ -242,7 +242,7 @@ let test_binary_literals () =
   let binary_tokens =
     List.filter
       (fun tok ->
-        match tok.Token.kind with Token.LitInt _ -> true | _ -> false)
+        match tok.Token.kind with Token.IntLit _ -> true | _ -> false)
       tokens
   in
   check int "two binary literals" 2 (List.length binary_tokens)
@@ -253,7 +253,7 @@ let test_octal_literals () =
   let octal_tokens =
     List.filter
       (fun tok ->
-        match tok.Token.kind with Token.LitInt _ -> true | _ -> false)
+        match tok.Token.kind with Token.IntLit _ -> true | _ -> false)
       tokens
   in
   check int "two octal literals" 2 (List.length octal_tokens)
@@ -264,7 +264,7 @@ let test_hex_literals () =
   let hex_tokens =
     List.filter
       (fun tok ->
-        match tok.Token.kind with Token.LitInt _ -> true | _ -> false)
+        match tok.Token.kind with Token.IntLit _ -> true | _ -> false)
       tokens
   in
   check int "two hex literals" 2 (List.length hex_tokens)
@@ -275,7 +275,7 @@ let test_scientific_notation () =
   let sci_tokens =
     List.filter
       (fun tok ->
-        match tok.Token.kind with Token.LitFloat _ -> true | _ -> false)
+        match tok.Token.kind with Token.FloatLit _ -> true | _ -> false)
       tokens
   in
   check int "three scientific literals" 3 (List.length sci_tokens)
@@ -302,7 +302,7 @@ let test_template_literals () =
     List.filter
       (fun tok ->
         match tok.Token.kind with
-        | Token.LitNoSubstTemplate _ -> true
+        | Token.NoSubstTemplateLit _ -> true
         | _ -> false)
       tokens
   in
