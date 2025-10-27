@@ -17,11 +17,11 @@ type suffix =
 (** Token types *)
 type t =
   | Ident of Musi_shared.Interner.symbol
-  | LitInt of string * suffix option
-  | LitFloat of string * suffix option
-  | LitText of Musi_shared.Interner.symbol
-  | LitRune of int
-  | LitNoSubstTemplate of Musi_shared.Interner.symbol
+  | IntLit of string * suffix option
+  | FloatLit of string * suffix option
+  | TextLit of Musi_shared.Interner.symbol
+  | RuneLit of int
+  | NoSubstTemplateLit of Musi_shared.Interner.symbol
   | TemplateHead of Musi_shared.Interner.symbol
   | TemplateMiddle of Musi_shared.Interner.symbol
   | TemplateTail of Musi_shared.Interner.symbol

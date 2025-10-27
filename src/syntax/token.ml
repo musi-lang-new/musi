@@ -15,11 +15,11 @@ type suffix =
 
 type t =
   | Ident of Musi_shared.Interner.symbol
-  | LitInt of string * suffix option
-  | LitFloat of string * suffix option
-  | LitText of Musi_shared.Interner.symbol
-  | LitRune of int
-  | LitNoSubstTemplate of Musi_shared.Interner.symbol
+  | IntLit of string * suffix option
+  | FloatLit of string * suffix option
+  | TextLit of Musi_shared.Interner.symbol
+  | RuneLit of int
+  | NoSubstTemplateLit of Musi_shared.Interner.symbol
   | TemplateHead of Musi_shared.Interner.symbol
   | TemplateMiddle of Musi_shared.Interner.symbol
   | TemplateTail of Musi_shared.Interner.symbol
@@ -125,12 +125,12 @@ let expect s kind =
 
 let kind_to_string interner = function
   | Ident sym -> Musi_shared.Interner.to_string interner sym
-  | LitInt (s, _) -> s
-  | LitFloat (s, _) -> s
-  | LitText sym ->
+  | IntLit (s, _) -> s
+  | FloatLit (s, _) -> s
+  | TextLit sym ->
     Printf.sprintf "\"%s\"" (Musi_shared.Interner.to_string interner sym)
-  | LitRune c -> Printf.sprintf "'%c'" (Char.chr c)
-  | LitNoSubstTemplate sym ->
+  | RuneLit c -> Printf.sprintf "'%c'" (Char.chr c)
+  | NoSubstTemplateLit sym ->
     Printf.sprintf "`%s`" (Musi_shared.Interner.to_string interner sym)
   | TemplateHead sym ->
     Printf.sprintf "`%s${" (Musi_shared.Interner.to_string interner sym)
