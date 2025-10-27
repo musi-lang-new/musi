@@ -160,7 +160,7 @@ let symbols =
   [
     ("=/=", Token.EqSlashEq)
   ; ("..<", Token.DotDotLt)
-  ; ("...", Token.DotDotDot)
+  ; ("..", Token.DotDot)
   ; ("<=", Token.LtEq)
   ; (">=", Token.GtEq)
   ; ("<-", Token.LtMinus)
@@ -174,6 +174,7 @@ let symbols =
   ; ("=", Token.Eq)
   ; ("<", Token.Lt)
   ; (">", Token.Gt)
+  ; ("_", Token.Underscore)
   ; ("(", Token.LParen)
   ; (")", Token.RParen)
   ; ("[", Token.LBracket)
@@ -553,12 +554,14 @@ let scan_block_comment t start =
 let scan_ident t start =
   consume_while t is_ident_char;
   let text = slice t start in
-  match keyword_of_string text with
-  | Some kw -> Token.make kw (make_span t start)
-  | None ->
-    Token.make
-      (Token.Ident (Musi_shared.Interner.intern t.interner text))
-      (make_span t start)
+  if text = "_" then Token.make Token.Underscore (make_span t start)
+  else
+    match keyword_of_string text with
+    | Some kw -> Token.make kw (make_span t start)
+    | None ->
+      Token.make
+        (Token.Ident (Musi_shared.Interner.intern t.interner text))
+        (make_span t start)
 
 let scan_symbol t start =
   match List.find_opt (fun (sym, _) -> matches t sym) symbols with
