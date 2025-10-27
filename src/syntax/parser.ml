@@ -141,6 +141,7 @@ let parse_separated parse_item sep term t =
 let prefix_bp = function Token.Minus | Token.KwNot -> Some 13 | _ -> None
 
 let infix_bp = function
+  | Token.Dot | Token.LBracket -> Some (15, 16)
   | Token.Star | Token.Slash -> Some (11, 12)
   | Token.Plus | Token.Minus -> Some (9, 10)
   | Token.DotDotLt | Token.DotDotDot -> Some (7, 8)
@@ -162,6 +163,15 @@ and parse_expr_bp t min_bp : Tree.expr =
   in
   parse_infix_expr t lhs min_bp
 
+and parse_ident_expr t sym tok_span leading =
+  if (curr t).kind = Token.LBrace then (
+    advance t;
+    let fields = parse_record_fields t in
+    let _ = expect t Token.RBrace in
+    let span = make_span_to_curr t tok_span in
+    make_expr (Tree.Record { fields }) span leading)
+  else make_expr (Tree.Ident { name = sym }) tok_span leading
+
 and parse_primary_expr t : Tree.expr =
   let leading = collect_trivia t in
   let tok = Token.curr t.stream in
@@ -175,11 +185,21 @@ and parse_primary_expr t : Tree.expr =
     make_expr (Tree.TextLit { value = sym }) tok.span leading
   | Token.KwTrue -> make_expr (Tree.BoolLit { value = true }) tok.span leading
   | Token.KwFalse -> make_expr (Tree.BoolLit { value = false }) tok.span leading
-  | Token.Ident sym -> make_expr (Tree.Ident { name = sym }) tok.span leading
-  | Token.LParen -> parse_paren_expr t tok.span leading
+  | Token.Ident sym -> parse_ident_expr t sym tok.span leading
+  | Token.LParen -> parse_paren_or_tuple_expr t tok.span leading
+  | Token.LBracket -> parse_array_expr t tok.span leading
   | Token.LBrace -> parse_block_expr t tok.span leading
   | Token.KwIf -> parse_if_expr t tok.span leading
+  | Token.KwMatch -> parse_match_expr t tok.span leading
+  | Token.KwTry -> parse_try_expr t tok.span leading
+  | Token.KwDefer -> parse_defer_expr t tok.span leading
+  | Token.KwAsync -> parse_async_expr t tok.span leading
+  | Token.KwAwait -> parse_await_expr t tok.span leading
+  | Token.TemplateHead _ -> parse_template_expr t tok.span leading
+  | Token.LitNoSubstTemplate _ -> parse_template_expr t tok.span leading
   | _ ->
+    let _ = parse_unit_lit_expr t tok.span leading in
+    let _ = parse_closure_expr t tok.span leading in
     error t "expected expression" tok.span;
     make_expr Tree.Error tok.span leading
 
@@ -190,6 +210,28 @@ and parse_prefix_expr t bp : Tree.expr =
   let expr = parse_expr_bp t bp in
   let span = make_span_from_to op_tok.span expr.span in
   make_expr (Tree.Unary { op = op_tok.kind; operand = expr }) span leading
+
+and parse_index_access_expr t (lhs : Tree.expr) =
+  let index = parse_expr t in
+  let _ = expect t Token.RBracket in
+  let span = make_span_to_curr t lhs.span in
+  (Tree.IndexAccess { receiver = lhs; index }, span)
+
+and parse_field_access_expr t (lhs : Tree.expr) =
+  let field =
+    match (curr t).kind with
+    | Token.Ident sym ->
+      advance t;
+      sym
+    | Token.LitInt (s, _) ->
+      advance t;
+      Musi_shared.Interner.intern t.interner s
+    | _ ->
+      error t "expected field name" (curr t).span;
+      Musi_shared.Interner.intern t.interner "<error>"
+  in
+  let span = make_span_to_curr t lhs.span in
+  (Tree.FieldAccess { receiver = lhs; field }, span)
 
 and parse_infix_expr t lhs min_bp =
   match (curr t).kind with
@@ -217,6 +259,8 @@ and parse_infix_expr t lhs min_bp =
           let typ = parse_ty t in
           let span = make_span_from_to lhs.span typ.span in
           (Tree.Test { expr = lhs; typ }, span)
+        | Token.Dot -> parse_field_access_expr t lhs
+        | Token.LBracket -> parse_index_access_expr t lhs
         | _ -> (
           let rhs = parse_expr_bp t rbp in
           let span = make_span_from_to lhs.span rhs.span in
@@ -232,10 +276,44 @@ and parse_infix_expr t lhs min_bp =
 
 and parse_call_args t = parse_separated parse_expr Token.Comma Token.RParen t
 
-and parse_paren_expr t _start _leading =
-  let expr = parse_expr t in
-  let _ = expect t Token.RParen in
-  expr
+and parse_record_fields t =
+  parse_separated parse_record_field Token.Comma Token.RBrace t
+
+and parse_record_field t =
+  let name =
+    match (curr t).kind with
+    | Token.Ident sym ->
+      advance t;
+      sym
+    | _ ->
+      error t "expected field name" (curr t).span;
+      Musi_shared.Interner.intern t.interner "<error>"
+  in
+  let _ = expect t Token.ColonEq in
+  let value = parse_expr t in
+  (name, value)
+
+and parse_paren_or_tuple_expr t start leading =
+  if (curr t).kind = Token.RParen then (
+    advance t;
+    let span = make_span_to_curr t start in
+    make_expr Tree.UnitLit span leading)
+  else if (curr t).kind = Token.Comma then (
+    advance t;
+    let _ = expect t Token.RParen in
+    let span = make_span_to_curr t start in
+    make_expr (Tree.Tuple { elems = [] }) span leading)
+  else
+    let first_expr = parse_expr t in
+    if (curr t).kind = Token.Comma then (
+      advance t;
+      let rest_exprs = parse_separated parse_expr Token.Comma Token.RParen t in
+      let _ = expect t Token.RParen in
+      let span = make_span_to_curr t start in
+      make_expr (Tree.Tuple { elems = first_expr :: rest_exprs }) span leading)
+    else
+      let _ = expect t Token.RParen in
+      first_expr
 
 and parse_block_expr t start leading : Tree.expr =
   let _ = collect_trivia t in
@@ -273,24 +351,10 @@ and parse_match_expr t start leading : Tree.expr =
   make_expr Tree.Error start leading
 
 and parse_array_expr t start leading : Tree.expr =
-  error t "array expressions not implemented" start;
-  make_expr Tree.Error start leading
-
-and parse_tuple_expr t start leading : Tree.expr =
-  error t "tuple expressions not implemented" start;
-  make_expr Tree.Error start leading
-
-and parse_record_expr t start leading : Tree.expr =
-  error t "record expressions not implemented" start;
-  make_expr Tree.Error start leading
-
-and parse_field_access_expr t start leading : Tree.expr =
-  error t "field access expressions not implemented" start;
-  make_expr Tree.Error start leading
-
-and parse_index_access_expr t start leading : Tree.expr =
-  error t "index access expressions not implemented" start;
-  make_expr Tree.Error start leading
+  let elems = parse_separated parse_expr Token.Comma Token.RBracket t in
+  let _ = expect t Token.RBracket in
+  let span = make_span_to_curr t start in
+  make_expr (Tree.Array { elems }) span leading
 
 and parse_try_expr t start leading : Tree.expr =
   error t "try expressions not implemented" start;
@@ -326,9 +390,13 @@ and parse_stmt t : Tree.stmt =
   | Token.KwConst -> parse_bind_stmt t false leading
   | Token.KwVar -> parse_bind_stmt t true leading
   | Token.KwReturn -> parse_return_stmt t leading
+  | Token.KwBreak -> parse_break_stmt t leading
+  | Token.KwContinue -> parse_continue_stmt t leading
+  | Token.KwFor -> parse_for_stmt t leading
   | Token.KwWhile -> parse_while_stmt t leading
   | Token.KwFunc -> parse_decl_stmt t leading
   | Token.KwUnsafe -> parse_unsafe_stmt t leading
+  | Token.KwDefer -> parse_defer_stmt t leading
   | _ ->
     let expr = parse_expr_bp t 0 in
     if (curr t).kind = Token.LtMinus then parse_assign_stmt t expr leading
@@ -593,6 +661,12 @@ let parse_program tokens interner =
         match (curr t).kind with
         | Token.KwFunc -> parse_func_decl_with_modifiers t modifiers
         | Token.KwExtern -> parse_extern_decl t modifiers
+        | Token.KwRecord -> parse_record_decl t modifiers
+        | Token.KwChoice -> parse_choice_decl t modifiers
+        | Token.KwTrait -> parse_trait_decl t modifiers
+        | Token.KwAlias -> parse_alias_decl t modifiers
+        | Token.KwImport -> parse_import_decl t modifiers
+        | Token.KwExport -> parse_export_decl t modifiers
         | _ ->
           error t "expected declaration" (curr t).span;
           let span = (curr t).span in
