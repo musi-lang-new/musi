@@ -57,7 +57,7 @@ let make_span_to_curr t start_span = make_span_from_to start_span (curr t).span
    ======================================== *)
 
 let make_expr (kind : Tree.expr_kind) span leading : Tree.expr =
-  { Tree.kind; span; leading; trailing = []; typ = None; sym = None }
+  { Tree.kind; span; leading; trailing = []; ty = None; sym = None }
 
 let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
   {
@@ -70,7 +70,7 @@ let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
   ; sym = None
   }
 
-let make_typ (kind : Tree.typ_kind) span leading : Tree.typ =
+let make_typ (kind : Tree.typ_kind) span leading : Tree.ty =
   { Tree.kind; span; leading; trailing = [] }
 
 let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
@@ -85,7 +85,7 @@ let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
   }
 
 let make_pat (kind : Tree.pat_kind) span leading : Tree.pat =
-  { Tree.kind; span; leading; trailing = []; typ = None }
+  { Tree.kind; span; leading; trailing = []; ty = None }
 
 let error t msg span =
   t.diags :=
@@ -220,14 +220,14 @@ and parse_call_expr t (lhs : Tree.expr) =
   (Tree.Call { callee = lhs; args }, span)
 
 and parse_cast_expr t (lhs : Tree.expr) =
-  let typ = parse_ty t in
-  let span = make_span_from_to lhs.span typ.span in
-  (Tree.Cast { expr = lhs; typ }, span)
+  let ty = parse_ty t in
+  let span = make_span_from_to lhs.span ty.span in
+  (Tree.Cast { expr = lhs; ty }, span)
 
 and parse_test_expr t (lhs : Tree.expr) =
-  let typ = parse_ty t in
-  let span = make_span_from_to lhs.span typ.span in
-  (Tree.Test { expr = lhs; typ }, span)
+  let ty = parse_ty t in
+  let span = make_span_from_to lhs.span ty.span in
+  (Tree.Test { expr = lhs; ty }, span)
 
 and parse_field_expr t (lhs : Tree.expr) =
   let field =
@@ -521,7 +521,7 @@ and parse_stmt t : Tree.stmt =
 
 and parse_bind_expr t mutable_ start leading : Tree.expr =
   let pat = parse_pat t in
-  let typ =
+  let ty =
     if (curr t).kind = Token.Colon then (
       advance t;
       Some (parse_ty t))
@@ -530,7 +530,7 @@ and parse_bind_expr t mutable_ start leading : Tree.expr =
   let _ = expect t Token.ColonEq in
   let init = parse_expr t in
   let span = make_span_from_to start init.span in
-  make_expr (Tree.Bind { mutable_; pat; typ; init }) span leading
+  make_expr (Tree.Bind { mutable_; pat; ty; init }) span leading
 
 and parse_return_expr t start leading : Tree.expr =
   let value =
@@ -607,7 +607,7 @@ and parse_block_stmts t =
   in
   loop []
 
-and parse_ty t : Tree.typ =
+and parse_ty t : Tree.ty =
   let leading = collect_trivia t in
   let tok = Token.curr t.stream in
   Token.advance t.stream;
@@ -652,10 +652,10 @@ and parse_alias_decl t : Tree.decl =
       Musi_shared.Interner.intern t.interner "<error>"
   in
   let _ = expect t Token.ColonEq in
-  let typ = parse_ty t in
+  let ty = parse_ty t in
   let _ = expect t Token.Semi in
   let span = make_span_to_curr t start in
-  make_decl (Tree.Alias { name; typ }) span leading
+  make_decl (Tree.Alias { name; ty }) span leading
 
 and parse_params t = parse_separated parse_param Token.Comma Token.RParen t
 
@@ -674,7 +674,7 @@ and parse_param t =
   let _ = expect t Token.Colon in
   let ty = parse_ty t in
   let span = make_span_to_curr t start in
-  { Tree.name; typ = ty; span; leading; trailing = [] }
+  { Tree.name; ty; span; leading; trailing = [] }
 
 (* ========================================
    PUBLIC API
