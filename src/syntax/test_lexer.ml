@@ -22,13 +22,13 @@ let basic_tokens () =
   check int "three newlines plus EOF" 4 (List.length tokens)
 
 let keywords_and_identifiers () =
-  let lexer = make_lexer "func if else while for" in
+  let lexer = make_lexer "proc if else while for" in
   let tokens, _diags = Lexer.lex lexer in
   let keyword_count =
     List.fold_left
       (fun acc tok ->
         match tok.Token.kind with
-        | Token.KwFunc | Token.KwIf | Token.KwElse | Token.KwWhile | Token.KwFor
+        | Token.KwProc | Token.KwIf | Token.KwElse | Token.KwWhile | Token.KwFor
           ->
           acc + 1
         | _ -> acc)
