@@ -55,9 +55,24 @@ let check input =
     Output.finished "type-checking completed";
     0)
 
-let run _input =
-  Output.error "VM not yet implemented";
-  1
+let run input =
+  Output.running input;
+  let ic = open_in input in
+  let source = really_input_string ic (in_channel_length ic) in
+  close_in ic;
+  match Musi.Compiler.compile_string source with
+  | Musi.Compiler.Success program ->
+    let vm = Musi_runtime.Vm.create program in
+    Musi_runtime.Vm.run vm
+  | Musi.Compiler.Failure diags ->
+    Musi.Compiler.print_diagnostics diags source;
+    let error_count = diags.errors in
+    let msg =
+      if error_count = 1 then "could not run due to previous error"
+      else Printf.sprintf "could not run due to %d previous errors" error_count
+    in
+    Output.error msg;
+    1
 
 let help () =
   print_endline "Musi";
