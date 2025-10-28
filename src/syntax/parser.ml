@@ -70,7 +70,7 @@ let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
   ; sym = None
   }
 
-let make_ty (kind : Tree.typ_kind) span leading : Tree.ty =
+let make_ty (kind : Tree.ty_kind) span leading : Tree.ty =
   { Tree.kind; span; leading; trailing = [] }
 
 let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
@@ -611,7 +611,7 @@ and parse_ty t : Tree.ty =
   let leading = collect_trivia t in
   let tok = Token.curr t.stream in
   Token.advance t.stream;
-  let kind : Tree.typ_kind =
+  let kind : Tree.ty_kind =
     match tok.kind with
     | Token.Ident sym -> Tree.Named { name = sym }
     | _ ->
