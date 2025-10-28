@@ -22,7 +22,7 @@ let rec equal_tys t1 t2 =
   | Record { name = n1; _ }, Record { name = n2; _ } -> n1 = n2
   | _ -> false
 
-let rec typ_to_string interner = function
+let rec ty_to_string interner = function
   | Int -> "Int"
   | Nat -> "Nat"
   | Bool -> "Bool"
@@ -30,8 +30,8 @@ let rec typ_to_string interner = function
   | Unit -> "Unit"
   | Proc { params; ret } ->
     let params_str =
-      String.concat ", " (List.map (typ_to_string interner) params)
+      String.concat ", " (List.map (ty_to_string interner) params)
     in
-    Printf.sprintf "func(%s) -> %s" params_str (typ_to_string interner ret)
+    Printf.sprintf "proc(%s) -> %s" params_str (ty_to_string interner ret)
   | Record { name; _ } -> Musi_shared.Interner.to_string interner name
   | Error -> "<error>"

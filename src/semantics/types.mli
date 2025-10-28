@@ -12,4 +12,4 @@ type ty =
   | Error
 
 val equal_tys : ty -> ty -> bool
-val typ_to_string : Musi_shared.Interner.t -> ty -> string
+val ty_to_string : Musi_shared.Interner.t -> ty -> string
