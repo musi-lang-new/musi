@@ -161,7 +161,7 @@ and parse_ident_expr t sym tok_span leading =
       let fields = parse_record_fields t in
       let _ = expect t Token.RBrace in
       let span = make_span_to_curr t tok_span in
-      make_expr (Tree.RecordLiteral { fields }) span leading)
+      make_expr (Tree.RecordLit { fields }) span leading)
     else (
       error t "expected '{' after '.'" (curr t).span;
       make_expr (Tree.Ident { name = sym }) tok_span leading))
@@ -432,7 +432,7 @@ and parse_proc_expr t start leading : Tree.expr =
     else None
   in
   let span = make_span_to_curr t start in
-  make_expr (Tree.FuncExpr { params; ret_ty; body }) span leading
+  make_expr (Tree.Proc { params; ret_ty; body }) span leading
 
 and parse_template_expr t start leading : Tree.expr =
   error t "template expressions not implemented" start;
