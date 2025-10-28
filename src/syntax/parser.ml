@@ -66,7 +66,7 @@ let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
   ; leading
   ; trailing = []
   ; decorators = []
-  ; exported = false
+  ; modifiers = Tree.default_modifiers
   ; sym = None
   }
 
@@ -74,7 +74,15 @@ let make_typ (kind : Tree.typ_kind) span leading : Tree.typ =
   { Tree.kind; span; leading; trailing = [] }
 
 let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
-  { Tree.kind; span; leading; trailing = []; sym = None }
+  {
+    Tree.kind
+  ; span
+  ; leading
+  ; trailing = []
+  ; decorators = []
+  ; modifiers = Tree.default_modifiers
+  ; sym = None
+  }
 
 let make_pat (kind : Tree.pat_kind) span leading : Tree.pat =
   { Tree.kind; span; leading; trailing = []; typ = None }
@@ -318,14 +326,12 @@ and parse_paren_or_tuple_expr t start leading =
       first_expr
 
 and parse_block_expr t start leading : Tree.expr =
-  let _ = collect_trivia t in
   let stmts = parse_block_stmts t in
   let _ = expect t Token.RBrace in
   let span = make_span_to_curr t start in
   make_expr (Tree.Block { stmts }) span leading
 
 and parse_if_expr t start leading : Tree.expr =
-  let _ = collect_trivia t in
   let cond = parse_expr t in
   let _ = expect t Token.KwThen in
   let _ = expect t Token.LBrace in
@@ -462,11 +468,34 @@ and parse_decorators t =
   in
   loop []
 
-and is_exported t =
-  if (curr t).kind = Token.KwExport then (
-    advance t;
-    true)
-  else false
+and parse_modifiers t =
+  let rec loop mods =
+    match (curr t).kind with
+    | Token.KwExport ->
+      advance t;
+      loop { mods with Tree.exported = true }
+    | Token.KwConst ->
+      advance t;
+      loop { mods with Tree.constness = true }
+    | Token.KwUnsafe ->
+      advance t;
+      loop { mods with Tree.unsafeness = true }
+    | Token.KwAsync ->
+      advance t;
+      loop { mods with Tree.asyncness = true }
+    | Token.KwExtern ->
+      advance t;
+      let lib_name =
+        match (curr t).kind with
+        | Token.TextLit sym ->
+          advance t;
+          Some sym
+        | _ -> None
+      in
+      loop { mods with Tree.externness = (true, lib_name) }
+    | _ -> mods
+  in
+  loop Tree.default_modifiers
 
 (* ========================================
    STATEMENT PARSING
@@ -475,7 +504,7 @@ and is_exported t =
 and parse_stmt t : Tree.stmt =
   let leading = collect_trivia t in
   let decorators = parse_decorators t in
-  let exported = is_exported t in
+  let modifiers = parse_modifiers t in
   let start = (Token.curr t.stream).span in
   let kind =
     match (Token.curr t.stream).kind with
@@ -488,7 +517,7 @@ and parse_stmt t : Tree.stmt =
       Tree.ExprStmt { expr }
   in
   let stmt = make_stmt kind start leading in
-  { stmt with decorators; exported }
+  { stmt with decorators; modifiers }
 
 and parse_bind_expr t mutable_ start leading : Tree.expr =
   let pat = parse_pat t in
@@ -656,6 +685,8 @@ let parse_program tokens interner =
   let rec loop acc =
     if (curr t).kind = Token.Eof then List.rev acc
     else
+      let decorators = parse_decorators t in
+      let modifiers = parse_modifiers t in
       let decl =
         match (curr t).kind with
         | Token.KwImport -> parse_import_decl t
@@ -667,6 +698,6 @@ let parse_program tokens interner =
           advance t;
           make_decl Tree.Error span []
       in
-      loop (decl :: acc)
+      loop ({ decl with Tree.decorators; modifiers } :: acc)
   in
   (loop [], !(t.diags))
