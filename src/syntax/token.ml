@@ -83,6 +83,7 @@ type t =
   | Star
   | Slash
   | Caret
+  | Ampersand
   | Eq
   | EqSlashEq
   | Lt
@@ -198,6 +199,7 @@ let kind_to_string interner = function
   | Star -> "*"
   | Slash -> "/"
   | Caret -> "^"
+  | Ampersand -> "&"
   | Eq -> "="
   | EqSlashEq -> "=/="
   | Lt -> "<"

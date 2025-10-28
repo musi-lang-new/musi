@@ -85,6 +85,7 @@ type t =
   | Star
   | Slash
   | Caret
+  | Ampersand
   | Eq
   | EqSlashEq
   | Lt
