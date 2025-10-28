@@ -113,12 +113,28 @@ and bind_ident_expr t expr name =
 
 and bind_bind_expr t expr mutable_ pat ty =
   match pat.Musi_syntax.Tree.kind with
-  | Musi_syntax.Tree.Ident { name } ->
+  | Musi_syntax.Tree.Ident { name } -> bind_bind_ident t expr mutable_ name ty
+  | _ -> bind_pat t pat
+
+and bind_bind_ident t expr mutable_ name ty =
+  match expr.kind with
+  | Musi_syntax.Tree.Bind { init; _ } -> (
+    match init.kind with
+    | Musi_syntax.Tree.Proc { params; ret_ty; _ } ->
+      let sym =
+        { Symbol.name; kind = Symbol.Proc { params; ret_ty }; span = expr.span }
+      in
+      Symbol.define t.syms sym
+    | _ ->
+      let sym =
+        { Symbol.name; kind = Symbol.Bind { mutable_; ty }; span = expr.span }
+      in
+      Symbol.define t.syms sym)
+  | _ ->
     let sym =
       { Symbol.name; kind = Symbol.Bind { mutable_; ty }; span = expr.span }
     in
     Symbol.define t.syms sym
-  | _ -> bind_pat t pat
 
 and bind_assign_expr t expr lhs rhs =
   bind_expr t lhs;
