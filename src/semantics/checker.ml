@@ -36,8 +36,8 @@ let error_mismatch t expected actual span =
   let msg =
     Printf.sprintf
       "expected '%s', found '%s'"
-      (Types.typ_to_string t.interner expected)
-      (Types.typ_to_string t.interner actual)
+      (Types.ty_to_string t.interner expected)
+      (Types.ty_to_string t.interner actual)
   in
   error t msg span
 
@@ -72,7 +72,7 @@ and resolve_named_ty t ast_ty name =
     resolve_error_ty t ast_ty name span "binding"
   | Some { kind = Symbol.Proc _; span; _ } ->
     resolve_error_ty t ast_ty name span "procedure"
-  | None -> resolve_typ_builtin t ast_ty name
+  | None -> resolve_ty_builtin t ast_ty name
 
 and resolve_error_ty t ast_ty name span context =
   let msg =
@@ -91,7 +91,7 @@ and resolve_error_ty t ast_ty name span context =
       (Musi_shared.Diagnostic.note "defined here" span);
   Types.Error
 
-and resolve_typ_builtin t ast_ty name =
+and resolve_ty_builtin t ast_ty name =
   let name_str = Musi_shared.Interner.to_string t.interner name in
   match name_str with
   | "Int" -> Types.Int
