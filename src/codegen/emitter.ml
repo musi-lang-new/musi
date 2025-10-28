@@ -219,9 +219,9 @@ and emit_expr t (expr : Musi_syntax.Tree.expr) =
   | Musi_syntax.Tree.Async _ | Musi_syntax.Tree.Await _
   | Musi_syntax.Tree.Cast _ | Musi_syntax.Tree.Test _
   | Musi_syntax.Tree.Template _ | Musi_syntax.Tree.BinLit _
-  | Musi_syntax.Tree.RecordLiteral _ | Musi_syntax.Tree.RecordExpr _
-  | Musi_syntax.Tree.ChoiceExpr _ | Musi_syntax.Tree.TraitExpr _
-  | Musi_syntax.Tree.FuncExpr _ | Musi_syntax.Tree.Assign _
+  | Musi_syntax.Tree.RecordLit _ | Musi_syntax.Tree.Record _
+  | Musi_syntax.Tree.Choice _ | Musi_syntax.Tree.Interface _
+  | Musi_syntax.Tree.Proc _ | Musi_syntax.Tree.Assign _
   | Musi_syntax.Tree.Return _ | Musi_syntax.Tree.Break _
   | Musi_syntax.Tree.Continue | Musi_syntax.Tree.While _
   | Musi_syntax.Tree.For _ | Musi_syntax.Tree.ArrayRepeat _
