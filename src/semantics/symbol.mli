@@ -5,6 +5,7 @@ type symbol_kind =
       ; ret_ty : Musi_syntax.Tree.ty option
     }
   | Type of { fields : Musi_syntax.Tree.field list option }
+  | Extern of { proc_id : int; lib_name : string }
 
 type symbol = {
     name : Musi_shared.Interner.symbol
