@@ -1,74 +1,49 @@
 open Alcotest
+module Lexer = Musi_syntax.Lexer
+module Parser = Musi_syntax.Parser
 module Emitter = Musi_codegen.Emitter
-module Instr = Musi_codegen.Instr
-module Tree = Musi_syntax.Tree
-module Token = Musi_syntax.Token
 module Interner = Musi_shared.Interner
-module Span = Musi_shared.Span
 
-let make_span () = Span.make 0 0 0
-
-let make_expr kind =
-  {
-    Tree.kind
-  ; span = make_span ()
-  ; leading = []
-  ; trailing = []
-  ; ty = None
-  ; sym = None
-  }
-
-let make_stmt expr : Tree.stmt =
-  {
-    kind = (Tree.Expr { expr } : Tree.stmt_kind)
-  ; span = make_span ()
-  ; leading = []
-  ; trailing = []
-  ; decorators = []
-  ; modifiers = Tree.default_modifiers
-  ; sym = None
-  }
-
-let test_constant_deduplication () =
+let make_emitter source =
   let interner = Interner.create () in
+  let lexer = Lexer.make 0 source interner in
+  let tokens, _lex_diags = Lexer.lex lexer in
+  let ast, _parse_diags = Parser.parse_program tokens interner in
   let emitter = Emitter.create interner in
-  let text_sym = Interner.intern interner "hello" in
-  let expr1 = make_expr (Tree.TextLit { value = text_sym }) in
-  let expr2 = make_expr (Tree.TextLit { value = text_sym }) in
-  let program = [ make_stmt expr1; make_stmt expr2 ] in
-  let result = Emitter.emit_program emitter program in
-  check int "duplicate constants deduplicated" 1 (List.length result.constants)
+  let program = Emitter.emit_program emitter ast in
+  program
 
-let test_program_emission () =
-  let interner = Interner.create () in
-  let emitter = Emitter.create interner in
-  let expr = make_expr (Tree.IntLit { value = "42"; suffix = None }) in
-  let program = [ make_stmt expr ] in
-  let result = Emitter.emit_program emitter program in
-  check
-    bool
-    "program emitted successfully"
-    true
-    (List.length result.constants >= 0)
+let test_simple_proc () =
+  let program = make_emitter "const f := proc (x: Int) -> Int { x };" in
+  check int "one procedure emitted" 1 (List.length program.procs)
 
-let test_binary_expr_emission () =
-  let interner = Interner.create () in
-  let emitter = Emitter.create interner in
-  let lhs = make_expr (Tree.IntLit { value = "1"; suffix = None }) in
-  let rhs = make_expr (Tree.IntLit { value = "2"; suffix = None }) in
-  let expr = make_expr (Tree.Binary { op = Token.Plus; lhs; rhs }) in
-  let program = [ make_stmt expr ] in
-  let result = Emitter.emit_program emitter program in
-  check bool "binary expression emitted" true (List.length result.constants >= 0)
+let test_proc_call () =
+  let program =
+    make_emitter "const f := proc (x: Int) -> Int { x }; const y := f(1);"
+  in
+  check int "one procedure emitted" 1 (List.length program.procs)
+
+let test_multiple_procs () =
+  let program =
+    make_emitter
+      "const f := proc (x: Int) -> Int { x }; const g := proc (y: Int) -> Int \
+       { y };"
+  in
+  check int "two procedures emitted" 2 (List.length program.procs)
+
+let test_no_procs () =
+  let program = make_emitter "const x := 1;" in
+  check int "no procedures emitted" 0 (List.length program.procs)
 
 let () =
   run
     "Emitter"
     [
-      ( "Program Emission"
+      ( "Procedures"
       , [
-          test_case "constant_deduplication" `Quick test_constant_deduplication
-        ; test_case "program_emission" `Quick test_program_emission
-        ; test_case "binary_expr_emission" `Quick test_binary_expr_emission
+          test_case "simple_proc" `Quick test_simple_proc
+        ; test_case "proc_call" `Quick test_proc_call
+        ; test_case "multiple_procs" `Quick test_multiple_procs
+        ; test_case "no_procs" `Quick test_no_procs
         ] )
     ]
