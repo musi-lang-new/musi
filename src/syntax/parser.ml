@@ -194,13 +194,33 @@ and parse_prefix_expr t bp : Tree.expr =
   let span = make_span_from_to op_tok.span expr.span in
   make_expr (Tree.Unary { op = op_tok.kind; operand = expr }) span leading
 
-and parse_index_access_expr t (lhs : Tree.expr) =
+and parse_call_args t = parse_separated parse_expr Token.Comma Token.RParen t
+
+and parse_call_expr t (lhs : Tree.expr) =
+  (* consume 'LParen' *)
+  advance t;
+  let args = parse_call_args t in
+  let _ = expect t Token.RParen in
+  let span = make_span_to_curr t lhs.span in
+  (Tree.Call { callee = lhs; args }, span)
+
+and parse_cast_expr t (lhs : Tree.expr) =
+  let typ = parse_ty t in
+  let span = make_span_from_to lhs.span typ.span in
+  (Tree.Cast { expr = lhs; typ }, span)
+
+and parse_test_expr t (lhs : Tree.expr) =
+  let typ = parse_ty t in
+  let span = make_span_from_to lhs.span typ.span in
+  (Tree.Test { expr = lhs; typ }, span)
+
+and parse_index_expr t (lhs : Tree.expr) =
   let index = parse_expr t in
   let _ = expect t Token.RBracket in
   let span = make_span_to_curr t lhs.span in
-  (Tree.IndexAccess { receiver = lhs; index }, span)
+  (Tree.Index { receiver = lhs; index }, span)
 
-and parse_field_access_expr t (lhs : Tree.expr) =
+and parse_field_expr t (lhs : Tree.expr) =
   let field =
     match (curr t).kind with
     | Token.Ident sym ->
@@ -214,19 +234,13 @@ and parse_field_access_expr t (lhs : Tree.expr) =
       Musi_shared.Interner.intern t.interner "<error>"
   in
   let span = make_span_to_curr t lhs.span in
-  (Tree.FieldAccess { receiver = lhs; field }, span)
+  (Tree.Field { receiver = lhs; field }, span)
 
 and parse_infix_expr t lhs min_bp =
   match (curr t).kind with
   | Token.LParen ->
-    advance t;
-    let args = parse_call_args t in
-    let _ = expect t Token.RParen in
-    let span = make_span_to_curr t lhs.span in
-    parse_infix_expr
-      t
-      (make_expr (Tree.Call { callee = lhs; args }) span [])
-      min_bp
+    let expr_kind, span = parse_call_expr t lhs in
+    parse_infix_expr t (make_expr expr_kind span []) min_bp
   | _ -> (
     match infix_bp (curr t).kind with
     | Some (lbp, rbp) when lbp >= min_bp ->
@@ -234,16 +248,10 @@ and parse_infix_expr t lhs min_bp =
       advance t;
       let expr_kind, span =
         match op with
-        | Token.KwAs ->
-          let typ = parse_ty t in
-          let span = make_span_from_to lhs.span typ.span in
-          (Tree.Cast { expr = lhs; typ }, span)
-        | Token.KwIs ->
-          let typ = parse_ty t in
-          let span = make_span_from_to lhs.span typ.span in
-          (Tree.Test { expr = lhs; typ }, span)
-        | Token.Dot -> parse_field_access_expr t lhs
-        | Token.LBracket -> parse_index_access_expr t lhs
+        | Token.KwAs -> parse_cast_expr t lhs
+        | Token.KwIs -> parse_test_expr t lhs
+        | Token.Dot -> parse_field_expr t lhs
+        | Token.LBracket -> parse_index_expr t lhs
         | _ -> (
           let rhs = parse_expr_bp t rbp in
           let span = make_span_from_to lhs.span rhs.span in
@@ -256,8 +264,6 @@ and parse_infix_expr t lhs min_bp =
       in
       parse_infix_expr t (make_expr expr_kind span []) min_bp
     | _ -> lhs)
-
-and parse_call_args t = parse_separated parse_expr Token.Comma Token.RParen t
 
 and parse_record_fields t =
   parse_separated parse_record_field Token.Comma Token.RBrace t
