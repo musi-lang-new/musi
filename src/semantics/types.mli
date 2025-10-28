@@ -9,6 +9,8 @@ type ty =
         name : Musi_shared.Interner.symbol
       ; fields : (Musi_shared.Interner.symbol * ty) list
     }
+  | Ptr of ty
+  | Ref of ty
   | Error
 
 val equal_tys : ty -> ty -> bool
