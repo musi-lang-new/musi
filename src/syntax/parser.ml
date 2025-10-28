@@ -194,7 +194,7 @@ and parse_primary_expr t : Tree.expr =
   | Token.KwDefer -> parse_defer_expr t tok.span leading
   | Token.KwAsync -> parse_async_expr t tok.span leading
   | Token.KwAwait -> parse_await_expr t tok.span leading
-  | Token.KwProc -> parse_func_expr t tok.span leading
+  | Token.KwProc -> parse_proc_expr t tok.span leading
   | Token.TemplateHead _ -> parse_template_expr t tok.span leading
   | Token.NoSubstTemplateLit _ -> parse_template_expr t tok.span leading
   | _ ->
@@ -410,7 +410,7 @@ and parse_await_expr t start leading : Tree.expr =
   let span = make_span_from_to start expr.span in
   make_expr (Tree.Await { expr }) span leading
 
-and parse_func_expr t start leading : Tree.expr =
+and parse_proc_expr t start leading : Tree.expr =
   let _ = expect t Token.LParen in
   let params = parse_params t in
   let _ = expect t Token.RParen in
