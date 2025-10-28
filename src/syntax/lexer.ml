@@ -174,6 +174,7 @@ let symbols =
   ; ("*", Token.Star)
   ; ("/", Token.Slash)
   ; ("^", Token.Caret)
+  ; ("&", Token.Ampersand)
   ; ("=", Token.Eq)
   ; ("<", Token.Lt)
   ; (">", Token.Gt)
