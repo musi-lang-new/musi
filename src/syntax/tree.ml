@@ -21,7 +21,7 @@ let default_modifiers =
 
 type typ_kind =
   | Named of { name : Musi_shared.Interner.symbol }
-  | Func of { param_typs : typ list; ret_typ : typ }
+  | Proc of { param_typs : typ list; ret_typ : typ }
   | Optional of { inner_typ : typ }
   | Fallible of { pass_typ : typ; fail_typ : typ option }
   | Array of { elem_typ : typ }
