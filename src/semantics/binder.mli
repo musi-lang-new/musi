@@ -1,5 +1,5 @@
 (** Binder state *)
-type t
+type t = { syms : Symbol.t; interner : Musi_shared.Interner.t }
 
 (** Create binder with interner *)
 val create : Musi_shared.Interner.t -> t
