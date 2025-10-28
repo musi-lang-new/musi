@@ -19,16 +19,16 @@ Systems programming language designed for clarity, safety, and performance. Read
 record Counter {
   var value: Nat;
 
-  func inc(var self) {
+  proc inc(var self) {
     self.value <- self.value + 1;
   }
 
-  func show(self) {
+  proc show(self) {
     writeln(`Counter is now: ${self.value}`);
   }
 }
 
-var counter := Counter{ .value := 0 };
+var counter := Counter.{ value := 0 };
 counter.inc();      // value is now 1
 counter.inc();      // value is now 2
 counter.show();     // prints: `Counter is now: 2`
