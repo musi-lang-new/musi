@@ -48,17 +48,17 @@ let cyan s = "\027[36m" ^ s ^ "\027[0m"
 let emit ppf diag files =
   let severity_str, severity_colored =
     match diag.severity with
-    | Error -> ("error", bold (red "error"))
-    | Warning -> ("warning", bold (yellow "warning"))
-    | Note -> ("note", bold (cyan "note"))
+    | Error -> ("error", bold (red "error") ^ bold ":")
+    | Warning -> ("warning", bold (yellow "warning") ^ bold ":")
+    | Note -> ("note", bold (cyan "note") ^ bold ":")
   in
   match Source.get_file files (Span.file diag.span) with
-  | None -> Format.fprintf ppf "%s: %s@." severity_str diag.message
+  | None -> Format.fprintf ppf "%s %s@." severity_str diag.message
   | Some file ->
     let line, col = Source.line_col file (Span.start diag.span) in
     Format.fprintf
       ppf
-      "%s:%d:%d: %s: %s@."
+      "%s:%d:%d: %s %s@."
       (Source.path file)
       line
       col
@@ -82,16 +82,16 @@ let emit ppf diag files =
     List.iter
       (fun (msg, span) ->
         match Source.get_file files (Span.file span) with
-        | None -> Format.fprintf ppf "%s: %s@." (bold (cyan "note")) msg
+        | None -> Format.fprintf ppf "%s %s@." (bold (cyan "note") ^ bold ":") msg
         | Some f ->
           let l, c = Source.line_col f (Span.start span) in
           Format.fprintf
             ppf
-            "%s:%d:%d: %s: %s@."
+            "%s:%d:%d: %s %s@."
             (Source.path f)
             l
             c
-            (bold (cyan "note"))
+            (bold (cyan "note") ^ bold ":")
             msg)
       (List.rev diag.notes)
 
