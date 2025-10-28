@@ -1,13 +1,13 @@
-type typ =
+type ty =
   | Int
   | Nat
   | Bool
   | Text
   | Unit
-  | Proc of { params : typ list; ret : typ }
+  | Proc of { params : ty list; ret : ty }
   | Record of {
         name : Musi_shared.Interner.symbol
-      ; fields : (Musi_shared.Interner.symbol * typ) list
+      ; fields : (Musi_shared.Interner.symbol * ty) list
     }
   | Error
 
