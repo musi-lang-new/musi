@@ -52,6 +52,12 @@ let make_span_from_to start_span end_span =
 
 let make_span_to_curr t start_span = make_span_from_to start_span (curr t).span
 
+and is_declaration_keyword = function
+  | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwInterface
+  | Token.KwAlias ->
+    true
+  | _ -> false
+
 (* ========================================
    AST CONSTRUCTORS
    ======================================== *)
@@ -467,14 +473,23 @@ and parse_modifiers t =
       advance t;
       loop { mods with Tree.exported = true }
     | Token.KwConst ->
-      advance t;
-      loop { mods with Tree.constness = true }
+      let next = Token.peek t.stream in
+      if is_declaration_keyword next.kind then (
+        advance t;
+        loop { mods with Tree.constness = true })
+      else mods
     | Token.KwUnsafe ->
-      advance t;
-      loop { mods with Tree.unsafeness = true }
+      let next = Token.peek t.stream in
+      if is_declaration_keyword next.kind then (
+        advance t;
+        loop { mods with Tree.unsafeness = true })
+      else mods
     | Token.KwAsync ->
-      advance t;
-      loop { mods with Tree.asyncness = true }
+      let next = Token.peek t.stream in
+      if is_declaration_keyword next.kind then (
+        advance t;
+        loop { mods with Tree.asyncness = true })
+      else mods
     | Token.KwExtern ->
       advance t;
       let lib_name =
