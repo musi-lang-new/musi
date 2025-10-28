@@ -70,7 +70,7 @@ let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
   ; sym = None
   }
 
-let make_typ (kind : Tree.typ_kind) span leading : Tree.ty =
+let make_ty (kind : Tree.typ_kind) span leading : Tree.ty =
   { Tree.kind; span; leading; trailing = [] }
 
 let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
@@ -414,7 +414,7 @@ and parse_proc_expr t start leading : Tree.expr =
   let _ = expect t Token.LParen in
   let params = parse_params t in
   let _ = expect t Token.RParen in
-  let ret_typ =
+  let ret_ty =
     if (curr t).kind = Token.MinusGt then (
       advance t;
       Some (parse_ty t))
@@ -429,7 +429,7 @@ and parse_proc_expr t start leading : Tree.expr =
     else None
   in
   let span = make_span_to_curr t start in
-  make_expr (Tree.FuncExpr { params; ret_typ; body }) span leading
+  make_expr (Tree.FuncExpr { params; ret_ty; body }) span leading
 
 and parse_template_expr t start leading : Tree.expr =
   error t "template expressions not implemented" start;
@@ -618,7 +618,7 @@ and parse_ty t : Tree.ty =
       error t "expected type" tok.span;
       Tree.Error
   in
-  make_typ kind tok.span leading
+  make_ty kind tok.span leading
 
 (* ========================================
    DECLARATION PARSING
