@@ -4,6 +4,7 @@ type symbol_ref = int
 
 type modifiers = {
     exported : bool
+  ; weakness : bool
   ; constness : bool
   ; unsafeness : bool
   ; asyncness : bool

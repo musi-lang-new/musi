@@ -472,6 +472,9 @@ and parse_modifiers t =
     | Token.KwExport ->
       advance t;
       loop { mods with Tree.exported = true }
+    | Token.KwWeak ->
+      advance t;
+      loop { mods with Tree.weakness = true }
     | Token.KwConst ->
       let next = Token.peek t.stream in
       if is_declaration_keyword next.kind then (

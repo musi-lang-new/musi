@@ -4,6 +4,7 @@ type symbol_ref = int
 
 type modifiers = {
     exported : bool
+  ; weakness : bool
   ; constness : bool
   ; unsafeness : bool
   ; asyncness : bool
@@ -13,6 +14,7 @@ type modifiers = {
 let default_modifiers =
   {
     exported = false
+  ; weakness = false
   ; constness = false
   ; unsafeness = false
   ; asyncness = false
