@@ -109,3 +109,5 @@ _opam/
 **/*.ms
 !examples/**/*.msc
 !examples/**/*.ms
+!stdlib/**/*.msc
+!stdlib/**/*.ms
