@@ -17,20 +17,20 @@ let test_empty () =
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "empty source has no errors" false (Diagnostic.has_errors diags)
 
-let test_func_basic () =
+let test_proc_basic () =
   let tokens, interner = make_parser "proc f() {}" in
   let ast, diags = Parser.parse_program tokens interner in
-  check bool "function has no errors" false (Diagnostic.has_errors diags);
+  check bool "procedure has no errors" false (Diagnostic.has_errors diags);
   check int "one declaration" 1 (List.length ast)
 
-let test_func_with_params () =
+let test_proc_with_params () =
   let tokens, interner =
     make_parser "proc add(x: Int, y: Int) -> Int { return x + y; }"
   in
   let ast, diags = Parser.parse_program tokens interner in
   check
     bool
-    "function with params has no errors"
+    "procedure with params has no errors"
     false
     (Diagnostic.has_errors diags);
   check int "one declaration" 1 (List.length ast)
@@ -83,12 +83,12 @@ let test_bindings () =
     false
     (Diagnostic.has_errors diags)
 
-let test_func_calls () =
+let test_proc_calls () =
   let tokens, interner = make_parser "proc test() { const x := add(1, 2); }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
-    "function calls parse without errors"
+    "procedure calls parse without errors"
     false
     (Diagnostic.has_errors diags)
 
@@ -382,7 +382,7 @@ let test_decorators () =
 
 let test_decorators_with_args () =
   let tokens, interner =
-    make_parser "@deprecated(\"use new_func instead\") proc old() {}"
+    make_parser "@deprecated(\"use new_proc instead\") proc old() {}"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -444,8 +444,8 @@ let () =
       ( "Basic"
       , [
           test_case "empty" `Quick test_empty
-        ; test_case "func_basic" `Quick test_func_basic
-        ; test_case "func_with_params" `Quick test_func_with_params
+        ; test_case "proc_basic" `Quick test_proc_basic
+        ; test_case "proc_with_params" `Quick test_proc_with_params
         ] )
     ; ( "Literals & Operators"
       , [
@@ -466,7 +466,7 @@ let () =
         ] )
     ; ( "Function Calls & Blocks"
       , [
-          test_case "func_calls" `Quick test_func_calls
+          test_case "proc_calls" `Quick test_proc_calls
         ; test_case "blocks" `Quick test_blocks
         ] )
     ; ( "Statements"
