@@ -87,17 +87,12 @@ let validate_utf8_char t pos =
 
 let validate_unicode_codepoint code pos t =
   if code > max_unicode_codepoint then (
-    error
-      t
-      (Printf.sprintf "codepoint 'U+%X' exceeds maximum 'U+10FFFF'" code)
-      pos;
+    error t (Printf.sprintf "codepoint U+%X exceeds maximum U+10FFFF" code) pos;
     false)
   else if code >= surrogate_start && code <= surrogate_end then (
     error
       t
-      (Printf.sprintf
-         "codepoint 'U+%X' in surrogate range [U+D800, U+DFFF]"
-         code)
+      (Printf.sprintf "codepoint U+%X in surrogate range [U+D800, U+DFFF]" code)
       pos;
     false)
   else true
