@@ -93,15 +93,11 @@ and expr_kind =
   | Array of { elems : expr list }
   | ArrayRepeat of { elem : expr; count : expr }
   | Tuple of { elems : expr list }
-  | RecordLiteral of { fields : (Musi_shared.Interner.symbol * expr) list }
-  | RecordExpr of { fields : field list; methods : stmt list }
-  | ChoiceExpr of { cases : choice_case list; methods : stmt list }
-  | TraitExpr of { methods : stmt list }
-  | FuncExpr of {
-        params : param list
-      ; ret_ty : ty option
-      ; body : stmt list option
-    }
+  | RecordLit of { fields : (Musi_shared.Interner.symbol * expr) list }
+  | Record of { fields : field list; methods : stmt list }
+  | Choice of { cases : choice_case list; methods : stmt list }
+  | Interface of { methods : stmt list }
+  | Proc of { params : param list; ret_ty : ty option; body : stmt list option }
   | Bind of { mutable_ : bool; pat : pat; ty : ty option; init : expr }
   | Assign of { lhs : expr; rhs : expr }
   | Return of { value : expr option }
