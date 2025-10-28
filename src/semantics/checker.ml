@@ -52,6 +52,8 @@ let rec resolve_ty t (ast_ty : Musi_syntax.Tree.ty) =
     resolve_proc_ty t param_tys ret_ty
   | Musi_syntax.Tree.Optional _ | Musi_syntax.Tree.Fallible _ ->
     error t "optional/fallible types not yet supported" ast_ty.span
+  | Musi_syntax.Tree.Ptr _ | Musi_syntax.Tree.Ref _ ->
+    error t "pointer/reference types not yet supported" ast_ty.span
   | Musi_syntax.Tree.Infer | Musi_syntax.Tree.Array _ | Musi_syntax.Tree.Tuple _
   | Musi_syntax.Tree.Generic _ | Musi_syntax.Tree.Where _
   | Musi_syntax.Tree.ArrayRepeat _ | Musi_syntax.Tree.Error ->
@@ -136,18 +138,27 @@ and infer_expr t (expr : Musi_syntax.Tree.expr) =
   | Musi_syntax.Tree.If { cond; then_br; else_br } ->
     infer_if_expr t expr cond then_br else_br
   | Musi_syntax.Tree.Block { stmts } -> infer_block_expr t stmts
+  | Musi_syntax.Tree.Bind { ty = Some ty_annot; init; _ } ->
+    let expected_ty = resolve_ty t ty_annot in
+    ignore (check_expr t expected_ty init);
+    Types.Unit
+  | Musi_syntax.Tree.Bind { ty = None; init; _ } ->
+    ignore (infer_expr t init);
+    Types.Unit
+  | Musi_syntax.Tree.Cast { expr = inner; ty } ->
+    ignore (infer_expr t inner);
+    resolve_ty t ty
   | Musi_syntax.Tree.Match _ | Musi_syntax.Tree.Array _
   | Musi_syntax.Tree.Tuple _ | Musi_syntax.Tree.ArrayRepeat _
   | Musi_syntax.Tree.RecordLiteral _ | Musi_syntax.Tree.RecordExpr _
   | Musi_syntax.Tree.ChoiceExpr _ | Musi_syntax.Tree.TraitExpr _
-  | Musi_syntax.Tree.FuncExpr _ | Musi_syntax.Tree.Bind _
-  | Musi_syntax.Tree.Assign _ | Musi_syntax.Tree.Return _
-  | Musi_syntax.Tree.Break _ | Musi_syntax.Tree.Continue
-  | Musi_syntax.Tree.While _ | Musi_syntax.Tree.For _ | Musi_syntax.Tree.Field _
-  | Musi_syntax.Tree.Index _ | Musi_syntax.Tree.Try _ | Musi_syntax.Tree.Defer _
-  | Musi_syntax.Tree.Range _ | Musi_syntax.Tree.Async _
-  | Musi_syntax.Tree.Await _ | Musi_syntax.Tree.Cast _ | Musi_syntax.Tree.Test _
-  | Musi_syntax.Tree.Template _ ->
+  | Musi_syntax.Tree.FuncExpr _ | Musi_syntax.Tree.Assign _
+  | Musi_syntax.Tree.Return _ | Musi_syntax.Tree.Break _
+  | Musi_syntax.Tree.Continue | Musi_syntax.Tree.While _
+  | Musi_syntax.Tree.For _ | Musi_syntax.Tree.Field _ | Musi_syntax.Tree.Index _
+  | Musi_syntax.Tree.Try _ | Musi_syntax.Tree.Defer _ | Musi_syntax.Tree.Range _
+  | Musi_syntax.Tree.Async _ | Musi_syntax.Tree.Await _
+  | Musi_syntax.Tree.Test _ | Musi_syntax.Tree.Template _ ->
     error t "expression type checking not yet implemented" expr.span
   | Musi_syntax.Tree.Error -> Types.Error
 
@@ -252,7 +263,7 @@ and infer_block_expr t stmts =
   | last :: rest -> (
     List.iter (check_stmt t) (List.rev rest);
     match last.Musi_syntax.Tree.kind with
-    | Musi_syntax.Tree.ExprStmt { expr } -> infer_expr t expr
+    | Musi_syntax.Tree.Expr { expr } -> infer_expr t expr
     | _ ->
       check_stmt t last;
       Types.Unit)
@@ -263,14 +274,19 @@ and infer_block_expr t stmts =
 
 and check_stmt t (stmt : Musi_syntax.Tree.stmt) =
   match stmt.kind with
-  | Musi_syntax.Tree.ExprStmt { expr } -> ignore (infer_expr t expr)
+  | Musi_syntax.Tree.Expr { expr } -> ignore (infer_expr t expr)
   | Musi_syntax.Tree.Error -> ()
 
 (* ========================================
    DECLARATION TYPE CHECKING
    ======================================== *)
 
-let check_decl _t (_decl : Musi_syntax.Tree.decl) = ()
+let check_decl t (decl : Musi_syntax.Tree.decl) =
+  match decl.kind with
+  | Musi_syntax.Tree.Stmt { stmt } -> check_stmt t stmt
+  | Musi_syntax.Tree.Import _ | Musi_syntax.Tree.Export _
+  | Musi_syntax.Tree.Alias _ | Musi_syntax.Tree.Error ->
+    ()
 
 (* ========================================
    PUBLIC API
