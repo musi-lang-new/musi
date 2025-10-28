@@ -282,6 +282,137 @@ let test_range_precedence () =
     false
     (Diagnostic.has_errors diags)
 
+let test_all_operators () =
+  let tokens, interner =
+    make_parser
+      "func test() { const x := a ^ b * c / d mod e + f - g shl h shr i and j \
+       xor k or l; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "all operators parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_operator_precedence () =
+  let tokens, interner = make_parser "func test() { const x := 2 ^ 3 ^ 4; }" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "exponentiation is right-associative"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_assignment_operator () =
+  let tokens, interner =
+    make_parser "func test() { var x := 0; x <- x + 1; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "assignment operator parses without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_not_equal () =
+  let tokens, interner = make_parser "func test() { const x := a =/= b; }" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "not equal operator parses without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_modifiers_export () =
+  let tokens, interner = make_parser "export const func foo() {}" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "export const modifiers parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_modifiers_unsafe () =
+  let tokens, interner = make_parser "unsafe func bar() {}" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "unsafe modifier parses without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_modifiers_async () =
+  let tokens, interner = make_parser "async func baz() {}" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "async modifier parses without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_modifiers_extern () =
+  let tokens, interner = make_parser "extern \"libc\" func malloc() {}" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "extern modifier with library parses without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_modifiers_combined () =
+  let tokens, interner =
+    make_parser "export const unsafe async func complex() {}"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "combined modifiers parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_decorators () =
+  let tokens, interner = make_parser "@inline func fast() {}" in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "decorators parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_decorators_with_args () =
+  let tokens, interner =
+    make_parser "@deprecated(\"use new_func instead\") func old() {}"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "decorators with arguments parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_decorators_and_modifiers () =
+  let tokens, interner =
+    make_parser "@inline @deprecated export const func combo() {}"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "decorators and modifiers together parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_literal_suffixes () =
+  let tokens, interner =
+    make_parser "func test() { const x := 42_i32; const y := 3.14_b64; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "literal suffixes parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
 let () =
   run
     "Parser"
@@ -334,4 +465,30 @@ let () =
         ; test_case "chained_access" `Quick test_chained_access
         ; test_case "range_precedence" `Quick test_range_precedence
         ] )
+    ; ( "New Operators"
+      , [
+          test_case "all_operators" `Quick test_all_operators
+        ; test_case "operator_precedence" `Quick test_operator_precedence
+        ; test_case "assignment_operator" `Quick test_assignment_operator
+        ; test_case "not_equal" `Quick test_not_equal
+        ] )
+    ; ( "Modifiers"
+      , [
+          test_case "modifiers_export" `Quick test_modifiers_export
+        ; test_case "modifiers_unsafe" `Quick test_modifiers_unsafe
+        ; test_case "modifiers_async" `Quick test_modifiers_async
+        ; test_case "modifiers_extern" `Quick test_modifiers_extern
+        ; test_case "modifiers_combined" `Quick test_modifiers_combined
+        ] )
+    ; ( "Decorators"
+      , [
+          test_case "decorators" `Quick test_decorators
+        ; test_case "decorators_with_args" `Quick test_decorators_with_args
+        ; test_case
+            "decorators_and_modifiers"
+            `Quick
+            test_decorators_and_modifiers
+        ] )
+    ; ( "Literal Suffixes"
+      , [ test_case "literal_suffixes" `Quick test_literal_suffixes ] )
     ]
