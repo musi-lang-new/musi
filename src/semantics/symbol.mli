@@ -1,8 +1,8 @@
 type symbol_kind =
-  | Bind of { mutable_ : bool; typ : Musi_syntax.Tree.typ option }
+  | Bind of { mutable_ : bool; ty : Musi_syntax.Tree.ty option }
   | Proc of {
         params : Musi_syntax.Tree.param list
-      ; ret_typ : Musi_syntax.Tree.typ option
+      ; ret_typ : Musi_syntax.Tree.ty option
     }
   | Type of { fields : Musi_syntax.Tree.field list option }
 
