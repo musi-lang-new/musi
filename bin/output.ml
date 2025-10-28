@@ -23,3 +23,7 @@ let error msg =
 let warning msg =
   Printf.eprintf "%s %s\n" (status_prefix (yellow "Warning")) msg;
   flush stderr
+
+let running file =
+  Printf.printf "%s %s\n" (status_prefix (green "Running")) file;
+  flush stdout
