@@ -6,7 +6,7 @@ type t = {
     interner : Musi_shared.Interner.t
   ; syms : Symbol.t
   ; diags : Musi_shared.Diagnostic.diagnostic_bag ref
-  ; env : (Musi_shared.Interner.symbol, Types.typ) Hashtbl.t
+  ; env : (Musi_shared.Interner.symbol, Types.ty) Hashtbl.t
 }
 
 (* ========================================
@@ -45,36 +45,36 @@ let error_mismatch t expected actual span =
    TYPE RESOLUTION
    ======================================== *)
 
-let rec resolve_typ t (ast_typ : Musi_syntax.Tree.typ) =
-  match ast_typ.kind with
-  | Musi_syntax.Tree.Named { name } -> resolve_named_typ t ast_typ name
-  | Musi_syntax.Tree.Proc { param_typs; ret_typ } ->
-    resolve_proc_typ t param_typs ret_typ
+let rec resolve_ty t (ast_ty : Musi_syntax.Tree.ty) =
+  match ast_ty.kind with
+  | Musi_syntax.Tree.Named { name } -> resolve_named_ty t ast_ty name
+  | Musi_syntax.Tree.Proc { param_tys; ret_ty } ->
+    resolve_proc_ty t param_tys ret_ty
   | Musi_syntax.Tree.Optional _ | Musi_syntax.Tree.Fallible _ ->
-    error t "optional/fallible types not yet supported" ast_typ.span
+    error t "optional/fallible types not yet supported" ast_ty.span
   | Musi_syntax.Tree.Infer | Musi_syntax.Tree.Array _ | Musi_syntax.Tree.Tuple _
   | Musi_syntax.Tree.Generic _ | Musi_syntax.Tree.Where _
   | Musi_syntax.Tree.ArrayRepeat _ | Musi_syntax.Tree.Error ->
     Types.Error
 
-and resolve_named_typ t ast_typ name =
+and resolve_named_ty t ast_ty name =
   match Symbol.lookup t.syms name with
   | Some { kind = Symbol.Type { fields = Some flds }; _ } ->
     let fields =
       List.map
-        (fun (f : Musi_syntax.Tree.field) -> (f.name, resolve_typ t f.typ))
+        (fun (f : Musi_syntax.Tree.field) -> (f.name, resolve_ty t f.ty))
         flds
     in
     Types.Record { name; fields }
   | Some { kind = Symbol.Type { fields = None }; _ } ->
     Types.Record { name; fields = [] }
   | Some { kind = Symbol.Bind _; span; _ } ->
-    resolve_error_typ t ast_typ name span "binding"
+    resolve_error_ty t ast_ty name span "binding"
   | Some { kind = Symbol.Proc _; span; _ } ->
-    resolve_error_typ t ast_typ name span "procedure"
-  | None -> resolve_typ_builtin t ast_typ name
+    resolve_error_ty t ast_ty name span "procedure"
+  | None -> resolve_typ_builtin t ast_ty name
 
-and resolve_error_typ t ast_typ name span context =
+and resolve_error_ty t ast_ty name span context =
   let msg =
     Printf.sprintf
       "'%s' is %s, not type"
@@ -84,14 +84,14 @@ and resolve_error_typ t ast_typ name span context =
   t.diags :=
     Musi_shared.Diagnostic.add
       !(t.diags)
-      (Musi_shared.Diagnostic.error msg ast_typ.span);
+      (Musi_shared.Diagnostic.error msg ast_ty.span);
   t.diags :=
     Musi_shared.Diagnostic.add
       !(t.diags)
       (Musi_shared.Diagnostic.note "defined here" span);
   Types.Error
 
-and resolve_typ_builtin t ast_typ name =
+and resolve_typ_builtin t ast_ty name =
   let name_str = Musi_shared.Interner.to_string t.interner name in
   match name_str with
   | "Int" -> Types.Int
@@ -99,13 +99,12 @@ and resolve_typ_builtin t ast_typ name =
   | "Bool" -> Types.Bool
   | "Text" -> Types.Text
   | "Unit" -> Types.Unit
-  | _ ->
-    error t (Printf.sprintf "unknown type name: '%s'" name_str) ast_typ.span
+  | _ -> error t (Printf.sprintf "unknown type name: '%s'" name_str) ast_ty.span
 
-and resolve_proc_typ t params ret =
-  let param_typs = List.map (resolve_typ t) params in
-  let ret_typ = resolve_typ t ret in
-  Types.Proc { params = param_typs; ret = ret_typ }
+and resolve_proc_ty t params ret =
+  let param_tys = List.map (resolve_ty t) params in
+  let ret_ty = resolve_ty t ret in
+  Types.Proc { params = param_tys; ret = ret_ty }
 
 (* ========================================
    EXPRESSION TYPE CHECKING
@@ -114,13 +113,12 @@ and resolve_proc_typ t params ret =
 let rec check_expr t expected (expr : Musi_syntax.Tree.expr) =
   match expr.kind with
   | Musi_syntax.Tree.IntLit _ ->
-    if
-      Types.equal_typs expected Types.Int || Types.equal_typs expected Types.Nat
+    if Types.equal_tys expected Types.Int || Types.equal_tys expected Types.Nat
     then expected
     else error_mismatch t expected Types.Nat expr.span
   | _ ->
     let actual = infer_expr t expr in
-    if Types.equal_typs expected actual then expected
+    if Types.equal_tys expected actual then expected
     else error_mismatch t expected actual expr.span
 
 and infer_expr t (expr : Musi_syntax.Tree.expr) =
@@ -155,7 +153,7 @@ and infer_expr t (expr : Musi_syntax.Tree.expr) =
 
 and infer_ident_expr t expr name =
   match Hashtbl.find_opt t.env name with
-  | Some typ -> typ
+  | Some ty -> ty
   | None ->
     error
       t
@@ -165,24 +163,23 @@ and infer_ident_expr t expr name =
       expr.span
 
 and infer_binary_expr t expr op lhs rhs =
-  let lhs_typ = infer_expr t lhs in
-  let rhs_typ = infer_expr t rhs in
+  let lhs_ty = infer_expr t lhs in
+  let rhs_ty = infer_expr t rhs in
   match op with
   | Musi_syntax.Token.Plus | Musi_syntax.Token.Minus | Musi_syntax.Token.Star
   | Musi_syntax.Token.Slash ->
     if
-      Types.equal_typs lhs_typ rhs_typ
-      && (Types.equal_typs lhs_typ Types.Int
-         || Types.equal_typs lhs_typ Types.Nat)
-    then lhs_typ
+      Types.equal_tys lhs_ty rhs_ty
+      && (Types.equal_tys lhs_ty Types.Int || Types.equal_tys lhs_ty Types.Nat)
+    then lhs_ty
     else (
-      ignore (error_mismatch t lhs_typ rhs_typ rhs.span);
+      ignore (error_mismatch t lhs_ty rhs_ty rhs.span);
       Types.Error)
   | Musi_syntax.Token.Eq | Musi_syntax.Token.Lt | Musi_syntax.Token.Gt
   | Musi_syntax.Token.LtEq | Musi_syntax.Token.GtEq ->
-    if Types.equal_typs lhs_typ rhs_typ then Types.Bool
+    if Types.equal_tys lhs_ty rhs_ty then Types.Bool
     else (
-      ignore (error_mismatch t lhs_typ rhs_typ rhs.span);
+      ignore (error_mismatch t lhs_ty rhs_ty rhs.span);
       Types.Error)
   | _ ->
     error
@@ -193,17 +190,17 @@ and infer_binary_expr t expr op lhs rhs =
       expr.span
 
 and infer_unary_expr t expr op operand =
-  let operand_typ = infer_expr t operand in
+  let operand_ty = infer_expr t operand in
   match op with
   | Musi_syntax.Token.Minus ->
     if
-      Types.equal_typs operand_typ Types.Int
-      || Types.equal_typs operand_typ Types.Nat
-    then operand_typ
-    else error_mismatch t Types.Int operand_typ operand.span
+      Types.equal_tys operand_ty Types.Int
+      || Types.equal_tys operand_ty Types.Nat
+    then operand_ty
+    else error_mismatch t Types.Int operand_ty operand.span
   | Musi_syntax.Token.KwNot ->
-    if Types.equal_typs operand_typ Types.Bool then Types.Bool
-    else error_mismatch t Types.Bool operand_typ operand.span
+    if Types.equal_tys operand_ty Types.Bool then Types.Bool
+    else error_mismatch t Types.Bool operand_ty operand.span
   | _ ->
     error
       t
@@ -213,8 +210,8 @@ and infer_unary_expr t expr op operand =
       expr.span
 
 and infer_call_expr t expr callee args =
-  let callee_typ = infer_expr t callee in
-  match callee_typ with
+  let callee_ty = infer_expr t callee in
+  match callee_ty with
   | Types.Proc { params; ret } ->
     if List.length params <> List.length args then
       error
@@ -226,7 +223,7 @@ and infer_call_expr t expr callee args =
         expr.span
     else (
       List.iter2
-        (fun param_typ arg -> ignore (check_expr t param_typ arg))
+        (fun param_ty arg -> ignore (check_expr t param_ty arg))
         params
         args;
       ret)
@@ -234,16 +231,16 @@ and infer_call_expr t expr callee args =
   | _ -> error t "called object type is not procedure" callee.span
 
 and infer_if_expr t _expr cond then_br else_br =
-  let cond_typ = infer_expr t cond in
-  if not (Types.equal_typs cond_typ Types.Bool) then
-    ignore (error_mismatch t Types.Bool cond_typ cond.span);
+  let cond_ty = infer_expr t cond in
+  if not (Types.equal_tys cond_ty Types.Bool) then
+    ignore (error_mismatch t Types.Bool cond_ty cond.span);
   match else_br with
   | Some else_expr ->
-    let then_typ = infer_expr t then_br in
-    let else_typ = infer_expr t else_expr in
-    if Types.equal_typs then_typ else_typ then then_typ
+    let then_ty = infer_expr t then_br in
+    let else_ty = infer_expr t else_expr in
+    if Types.equal_tys then_ty else_ty then then_ty
     else (
-      ignore (error_mismatch t then_typ else_typ else_expr.span);
+      ignore (error_mismatch t then_ty else_ty else_expr.span);
       Types.Error)
   | None ->
     ignore (infer_expr t then_br);
