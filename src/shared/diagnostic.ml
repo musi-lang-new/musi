@@ -40,12 +40,17 @@ let merge bags =
     empty_bag
     bags
 
+let bold s = "\027[1m" ^ s ^ "\027[0m"
+let red s = "\027[31m" ^ s ^ "\027[0m"
+let yellow s = "\027[33m" ^ s ^ "\027[0m"
+let cyan s = "\027[36m" ^ s ^ "\027[0m"
+
 let emit ppf diag files =
-  let severity_str =
+  let severity_str, severity_colored =
     match diag.severity with
-    | Error -> "error"
-    | Warning -> "warning"
-    | Note -> "note"
+    | Error -> ("error", bold (red "error"))
+    | Warning -> ("warning", bold (yellow "warning"))
+    | Note -> ("note", bold (cyan "note"))
   in
   match Source.get_file files (Span.file diag.span) with
   | None -> Format.fprintf ppf "%s: %s@." severity_str diag.message
@@ -57,12 +62,12 @@ let emit ppf diag files =
       (Source.path file)
       line
       col
-      severity_str
-      diag.message;
+      severity_colored
+      (bold diag.message);
     (match Source.line_text file line with
     | None -> ()
     | Some text ->
-      Format.fprintf ppf " %d | %s@." line text;
+      Format.fprintf ppf " %s | %s@." (bold (string_of_int line)) text;
       let end_line, end_col = Source.line_col file (Span.end_ diag.span) in
       let len =
         if line = end_line then max 1 (end_col - col)
@@ -71,16 +76,23 @@ let emit ppf diag files =
       Format.fprintf
         ppf
         " %s | %s%s@."
-        (String.make (String.length (string_of_int line)) ' ')
+        (bold (String.make (String.length (string_of_int line)) ' '))
         (String.make (col - 1) ' ')
-        (String.make len '^'));
+        (bold (red (String.make len '^'))));
     List.iter
       (fun (msg, span) ->
         match Source.get_file files (Span.file span) with
-        | None -> Format.fprintf ppf "note: %s@." msg
+        | None -> Format.fprintf ppf "%s: %s@." (bold (cyan "note")) msg
         | Some f ->
           let l, c = Source.line_col f (Span.start span) in
-          Format.fprintf ppf "%s:%d:%d: note: %s@." (Source.path f) l c msg)
+          Format.fprintf
+            ppf
+            "%s:%d:%d: %s: %s@."
+            (Source.path f)
+            l
+            c
+            (bold (cyan "note"))
+            msg)
       (List.rev diag.notes)
 
 let emit_all ppf bag files = List.iter (fun d -> emit ppf d files) (to_list bag)
