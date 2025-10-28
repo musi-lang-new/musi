@@ -2,6 +2,23 @@ type trivia = Token.token list
 type typ_ref = int
 type symbol_ref = int
 
+type modifiers = {
+    exported : bool
+  ; constness : bool
+  ; unsafeness : bool
+  ; asyncness : bool
+  ; externness : bool * Musi_shared.Interner.symbol option
+}
+
+let default_modifiers =
+  {
+    exported = false
+  ; constness = false
+  ; unsafeness = false
+  ; asyncness = false
+  ; externness = (false, None)
+  }
+
 type typ_kind =
   | Named of { name : Musi_shared.Interner.symbol }
   | Func of { param_typs : typ list; ret_typ : typ }
@@ -127,7 +144,7 @@ and stmt = {
   ; leading : trivia
   ; trailing : trivia
   ; decorators : decorator list
-  ; exported : bool
+  ; modifiers : modifiers
   ; mutable sym : symbol_ref option
 }
 
@@ -188,6 +205,8 @@ and decl = {
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
+  ; decorators : decorator list
+  ; modifiers : modifiers
   ; mutable sym : symbol_ref option
 }
 
