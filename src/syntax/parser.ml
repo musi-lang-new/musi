@@ -118,7 +118,10 @@ let parse_separated parse_item sep term t =
   in
   loop []
 
-let prefix_bp = function Token.Minus | Token.KwNot -> Some 13 | _ -> None
+let prefix_bp = function
+  | Token.Minus | Token.KwNot -> Some 13
+  | Token.Ampersand -> Some 13
+  | _ -> None
 
 let infix_bp = function
   | Token.Dot | Token.LBracket -> Some (15, 16)
@@ -610,15 +613,24 @@ and parse_block_stmts t =
 and parse_ty t : Tree.ty =
   let leading = collect_trivia t in
   let tok = Token.curr t.stream in
-  Token.advance t.stream;
-  let kind : Tree.ty_kind =
-    match tok.kind with
-    | Token.Ident sym -> Tree.Named { name = sym }
-    | _ ->
-      error t "expected type" tok.span;
-      Tree.Error
-  in
-  make_ty kind tok.span leading
+  match tok.kind with
+  | Token.Star ->
+    Token.advance t.stream;
+    let inner = parse_ty t in
+    let span = make_span_from_to tok.span inner.span in
+    make_ty (Tree.Ptr { inner }) span leading
+  | Token.Ampersand ->
+    Token.advance t.stream;
+    let inner = parse_ty t in
+    let span = make_span_from_to tok.span inner.span in
+    make_ty (Tree.Ref { inner }) span leading
+  | Token.Ident sym ->
+    Token.advance t.stream;
+    make_ty (Tree.Named { name = sym }) tok.span leading
+  | _ ->
+    Token.advance t.stream;
+    error t "expected type" tok.span;
+    make_ty Tree.Error tok.span leading
 
 (* ========================================
    DECLARATION PARSING
