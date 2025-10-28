@@ -114,11 +114,18 @@ let prefix_bp = function Token.Minus | Token.KwNot -> Some 13 | _ -> None
 
 let infix_bp = function
   | Token.Dot | Token.LBracket -> Some (15, 16)
-  | Token.Star | Token.Slash -> Some (11, 12)
+  | Token.Caret -> Some (14, 13)
+  | Token.Star | Token.Slash | Token.KwMod -> Some (11, 12)
   | Token.Plus | Token.Minus -> Some (9, 10)
+  | Token.KwShl | Token.KwShr -> Some (8, 9)
   | Token.DotDotLt | Token.DotDot -> Some (7, 8)
-  | Token.Lt | Token.Gt | Token.LtEq | Token.GtEq | Token.Eq -> Some (5, 6)
-  | Token.KwAs | Token.KwIs -> Some (3, 4)
+  | Token.Lt | Token.Gt | Token.LtEq | Token.GtEq -> Some (5, 6)
+  | Token.Eq | Token.EqSlashEq -> Some (5, 6)
+  | Token.KwAnd -> Some (4, 5)
+  | Token.KwXor -> Some (3, 4)
+  | Token.KwOr -> Some (2, 3)
+  | Token.KwAs | Token.KwIs -> Some (1, 2)
+  | Token.LtMinus -> Some (0, 1)
   | _ -> None
 
 (* ========================================
@@ -154,10 +161,10 @@ and parse_primary_expr t : Tree.expr =
   let tok = Token.curr t.stream in
   Token.advance t.stream;
   match tok.kind with
-  | Token.IntLit (s, _) ->
-    make_expr (Tree.IntLit { value = s }) tok.span leading
-  | Token.FloatLit (s, _) ->
-    make_expr (Tree.BinLit { value = s }) tok.span leading
+  | Token.IntLit (s, suffix) ->
+    make_expr (Tree.IntLit { value = s; suffix }) tok.span leading
+  | Token.FloatLit (s, suffix) ->
+    make_expr (Tree.BinLit { value = s; suffix }) tok.span leading
   | Token.TextLit sym ->
     make_expr (Tree.TextLit { value = sym }) tok.span leading
   | Token.KwTrue -> make_expr (Tree.BoolLit { value = true }) tok.span leading
@@ -214,12 +221,6 @@ and parse_test_expr t (lhs : Tree.expr) =
   let span = make_span_from_to lhs.span typ.span in
   (Tree.Test { expr = lhs; typ }, span)
 
-and parse_index_expr t (lhs : Tree.expr) =
-  let index = parse_expr t in
-  let _ = expect t Token.RBracket in
-  let span = make_span_to_curr t lhs.span in
-  (Tree.Index { receiver = lhs; index }, span)
-
 and parse_field_expr t (lhs : Tree.expr) =
   let field =
     match (curr t).kind with
@@ -235,6 +236,17 @@ and parse_field_expr t (lhs : Tree.expr) =
   in
   let span = make_span_to_curr t lhs.span in
   (Tree.Field { receiver = lhs; field }, span)
+
+and parse_index_expr t (lhs : Tree.expr) =
+  let index = parse_expr t in
+  let _ = expect t Token.RBracket in
+  let span = make_span_to_curr t lhs.span in
+  (Tree.Index { receiver = lhs; index }, span)
+
+and parse_assign_expr t (lhs : Tree.expr) =
+  let rhs = parse_expr t in
+  let span = make_span_from_to lhs.span rhs.span in
+  (Tree.Assign { lhs; rhs }, span)
 
 and parse_infix_expr t lhs min_bp =
   match (curr t).kind with
@@ -252,6 +264,7 @@ and parse_infix_expr t lhs min_bp =
         | Token.KwIs -> parse_test_expr t lhs
         | Token.Dot -> parse_field_expr t lhs
         | Token.LBracket -> parse_index_expr t lhs
+        | Token.LtMinus -> parse_assign_expr t lhs
         | _ -> (
           let rhs = parse_expr_bp t rbp in
           let span = make_span_from_to lhs.span rhs.span in
@@ -489,12 +502,6 @@ and parse_bind_expr t mutable_ start leading : Tree.expr =
   let init = parse_expr t in
   let span = make_span_from_to start init.span in
   make_expr (Tree.Bind { mutable_; pat; typ; init }) span leading
-
-and parse_assign_expr t lhs start leading : Tree.expr =
-  advance t;
-  let rhs = parse_expr t in
-  let span = make_span_from_to start rhs.span in
-  make_expr (Tree.Assign { lhs; rhs }) span leading
 
 and parse_return_expr t start leading : Tree.expr =
   let value =
