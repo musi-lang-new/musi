@@ -39,7 +39,7 @@ let rec bind_expr t (expr : Musi_syntax.Tree.expr) =
   | Musi_syntax.Tree.ArrayRepeat { elem; count } ->
     bind_expr t elem;
     bind_expr t count
-  | Musi_syntax.Tree.RecordLiteral { fields } ->
+  | Musi_syntax.Tree.RecordLit { fields } ->
     List.iter (fun (_, e) -> bind_expr t e) fields
   | Musi_syntax.Tree.Field { receiver; _ } -> bind_expr t receiver
   | Musi_syntax.Tree.Index { receiver; index } ->
@@ -63,10 +63,9 @@ let rec bind_expr t (expr : Musi_syntax.Tree.expr) =
   | Musi_syntax.Tree.Async { expr }
   | Musi_syntax.Tree.Await { expr } ->
     bind_expr t expr
-  | Musi_syntax.Tree.FuncExpr { params; body; _ } ->
-    bind_proc_expr t params body
-  | Musi_syntax.Tree.RecordExpr _ | Musi_syntax.Tree.ChoiceExpr _
-  | Musi_syntax.Tree.TraitExpr _ | Musi_syntax.Tree.Template _
+  | Musi_syntax.Tree.Proc { params; body; _ } -> bind_proc_expr t params body
+  | Musi_syntax.Tree.Record _ | Musi_syntax.Tree.Choice _
+  | Musi_syntax.Tree.Interface _ | Musi_syntax.Tree.Template _
   | Musi_syntax.Tree.Error ->
     ()
 
