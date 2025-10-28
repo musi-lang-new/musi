@@ -60,6 +60,7 @@ type t =
   | KwTry
   | KwUnsafe
   | KwVar
+  | KwWeak
   | KwWhere
   | KwWhile
   | KwXor
@@ -176,6 +177,7 @@ let kind_to_string interner = function
   | KwTry -> "try"
   | KwUnsafe -> "unsafe"
   | KwVar -> "var"
+  | KwWeak -> "weak"
   | KwWhere -> "where"
   | KwWhile -> "while"
   | KwXor -> "xor"

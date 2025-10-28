@@ -138,6 +138,7 @@ let keyword_of_string = function
   | "try" -> Some Token.KwTry
   | "unsafe" -> Some Token.KwUnsafe
   | "var" -> Some Token.KwVar
+  | "weak" -> Some Token.KwWeak
   | "where" -> Some Token.KwWhere
   | "while" -> Some Token.KwWhile
   | "xor" -> Some Token.KwXor

@@ -62,6 +62,7 @@ type t =
   | KwTry
   | KwUnsafe
   | KwVar
+  | KwWeak
   | KwWhere
   | KwWhile
   | KwXor
