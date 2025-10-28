@@ -64,7 +64,7 @@ let rec bind_expr t (expr : Musi_syntax.Tree.expr) =
   | Musi_syntax.Tree.Await { expr } ->
     bind_expr t expr
   | Musi_syntax.Tree.FuncExpr { params; body; _ } ->
-    bind_func_expr t params body
+    bind_proc_expr t params body
   | Musi_syntax.Tree.RecordExpr _ | Musi_syntax.Tree.ChoiceExpr _
   | Musi_syntax.Tree.TraitExpr _ | Musi_syntax.Tree.Template _
   | Musi_syntax.Tree.Error ->
@@ -92,7 +92,7 @@ and bind_for_expr t pat iter body =
   List.iter (bind_stmt t) body;
   Symbol.exit_scope t.syms
 
-and bind_func_expr t params body =
+and bind_proc_expr t params body =
   Symbol.enter_scope t.syms;
   List.iter (bind_param t) params;
   Option.iter (fun stmts -> List.iter (bind_stmt t) stmts) body;
