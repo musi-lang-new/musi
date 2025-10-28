@@ -40,7 +40,6 @@ type t =
   | KwFalse
   | KwFor
   | KwFrom
-  | KwFunc
   | KwIf
   | KwImport
   | KwIn
@@ -49,13 +48,14 @@ type t =
   | KwMod
   | KwNot
   | KwOr
+  | KwProc
   | KwRecord
   | KwReturn
   | KwSelf
   | KwShl
   | KwShr
   | KwThen
-  | KwTrait
+  | KwInterface
   | KwTrue
   | KwTry
   | KwUnsafe
@@ -155,22 +155,22 @@ let kind_to_string interner = function
   | KwFalse -> "false"
   | KwFor -> "for"
   | KwFrom -> "from"
-  | KwFunc -> "func"
   | KwIf -> "if"
   | KwImport -> "import"
+  | KwInterface -> "interface"
   | KwIn -> "in"
   | KwIs -> "is"
   | KwMatch -> "match"
   | KwMod -> "mod"
   | KwNot -> "not"
   | KwOr -> "or"
+  | KwProc -> "proc"
   | KwRecord -> "record"
   | KwReturn -> "return"
   | KwSelf -> "self"
   | KwShl -> "shl"
   | KwShr -> "shr"
   | KwThen -> "then"
-  | KwTrait -> "trait"
   | KwTrue -> "true"
   | KwTry -> "try"
   | KwUnsafe -> "unsafe"

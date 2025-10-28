@@ -42,7 +42,6 @@ type t =
   | KwFalse
   | KwFor
   | KwFrom
-  | KwFunc
   | KwIf
   | KwImport
   | KwIn
@@ -51,6 +50,7 @@ type t =
   | KwMod
   | KwNot
   | KwOr
+  | KwProc
   | KwRecord
   | KwReturn
   | KwSelf
