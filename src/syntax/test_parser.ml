@@ -413,6 +413,30 @@ let test_literal_suffixes () =
     false
     (Diagnostic.has_errors diags)
 
+let test_pointer_types () =
+  let tokens, interner =
+    make_parser "proc test(ptr: *Int, ref: &Text) -> *Nat {}"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "pointer and reference types parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_pointer_operations () =
+  let tokens, interner =
+    make_parser
+      "proc test() { var x := 42; const ptr := &x; const val := ptr.*; ptr.* \
+       <- 100; }"
+  in
+  let _ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "pointer operations (address-of and dereference) parse without errors"
+    false
+    (Diagnostic.has_errors diags)
+
 let () =
   run
     "Parser"
@@ -491,4 +515,9 @@ let () =
         ] )
     ; ( "Literal Suffixes"
       , [ test_case "literal_suffixes" `Quick test_literal_suffixes ] )
+    ; ( "Pointers & References"
+      , [
+          test_case "pointer_types" `Quick test_pointer_types
+        ; test_case "pointer_operations" `Quick test_pointer_operations
+        ] )
     ]
