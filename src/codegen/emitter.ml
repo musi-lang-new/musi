@@ -234,10 +234,10 @@ and emit_expr t (expr : Musi_syntax.Tree.expr) =
 
 let emit_stmt t (stmt : Musi_syntax.Tree.stmt) =
   match stmt.kind with
-  | Musi_syntax.Tree.Expr { expr } ->
-    emit_expr t expr;
-    emit_instr t Instr.Pop
-  | Musi_syntax.Tree.Error -> ()
+  | Musi_syntax.Tree.Expr { expr } -> emit_expr t expr
+  | Musi_syntax.Tree.Import _ | Musi_syntax.Tree.Export _
+  | Musi_syntax.Tree.Alias _ | Musi_syntax.Tree.Error ->
+    ()
 
 (* ========================================
    PROCEDURE EMISSION
@@ -267,17 +267,10 @@ let _emit_proc t _name params _ret_ty body =
    PROGRAM EMISSION
    ======================================== *)
 
-let emit_decl t (decl : Musi_syntax.Tree.decl) =
-  match decl.kind with
-  | Musi_syntax.Tree.Stmt { stmt } -> emit_stmt t stmt
-  | Musi_syntax.Tree.Import _ | Musi_syntax.Tree.Export _
-  | Musi_syntax.Tree.Alias _ | Musi_syntax.Tree.Error ->
-    ()
-
 let emit_program_internal t program =
   reset_locals t;
   t.code <- [];
-  List.iter (emit_decl t) program;
+  List.iter (emit_stmt t) program;
   { Instr.constants = get_constant_pool t; procs = []; records = [] }
 
 (* ========================================
