@@ -508,7 +508,7 @@ and parse_stmt t : Tree.stmt =
   let start = (Token.curr t.stream).span in
   let kind =
     match (Token.curr t.stream).kind with
-    | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwTrait
+    | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwInterface
     | Token.KwAlias ->
       error t "declarations not yet implemented in statement context" start;
       Tree.ExprStmt { expr = make_expr Tree.Error start [] }
@@ -692,7 +692,7 @@ let parse_program tokens interner =
         | Token.KwImport -> parse_import_decl t
         | Token.KwExport -> parse_export_decl t
         | Token.KwAlias -> parse_alias_decl t
-        | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwTrait ->
+        | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwInterface ->
           error t "declaration not yet implemented" (curr t).span;
           let span = (curr t).span in
           let rec skip_to_end depth =
