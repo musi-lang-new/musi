@@ -11,14 +11,14 @@ type ty =
     }
   | Error
 
-let rec equal_typs t1 t2 =
+let rec equal_tys t1 t2 =
   match (t1, t2) with
   | Int, Int | Nat, Nat | Bool, Bool | Text, Text | Unit, Unit | Error, Error ->
     true
   | Proc { params = p1; ret = r1 }, Proc { params = p2; ret = r2 } ->
     List.length p1 = List.length p2
-    && List.for_all2 equal_typs p1 p2
-    && equal_typs r1 r2
+    && List.for_all2 equal_tys p1 p2
+    && equal_tys r1 r2
   | Record { name = n1; _ }, Record { name = n2; _ } -> n1 = n2
   | _ -> false
 
