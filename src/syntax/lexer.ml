@@ -115,22 +115,22 @@ let keyword_of_string = function
   | "false" -> Some Token.KwFalse
   | "for" -> Some Token.KwFor
   | "from" -> Some Token.KwFrom
-  | "func" -> Some Token.KwFunc
   | "if" -> Some Token.KwIf
   | "import" -> Some Token.KwImport
+  | "interface" -> Some Token.KwInterface
   | "in" -> Some Token.KwIn
   | "is" -> Some Token.KwIs
   | "match" -> Some Token.KwMatch
   | "mod" -> Some Token.KwMod
   | "not" -> Some Token.KwNot
   | "or" -> Some Token.KwOr
+  | "proc" -> Some Token.KwProc
   | "record" -> Some Token.KwRecord
   | "return" -> Some Token.KwReturn
   | "self" -> Some Token.KwSelf
   | "shl" -> Some Token.KwShl
   | "shr" -> Some Token.KwShr
   | "then" -> Some Token.KwThen
-  | "trait" -> Some Token.KwTrait
   | "true" -> Some Token.KwTrue
   | "try" -> Some Token.KwTry
   | "unsafe" -> Some Token.KwUnsafe
