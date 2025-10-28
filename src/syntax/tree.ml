@@ -21,12 +21,12 @@ let default_modifiers =
 
 type typ_kind =
   | Named of { name : Musi_shared.Interner.symbol }
-  | Proc of { param_typs : ty list; ret_typ : ty }
-  | Optional of { inner_typ : ty }
-  | Fallible of { pass_typ : ty; fail_typ : ty option }
-  | Array of { elem_typ : ty }
-  | ArrayRepeat of { elem_typ : ty; count_typ : ty }
-  | Tuple of { elem_typs : ty list }
+  | Proc of { param_tys : ty list; ret_ty : ty }
+  | Optional of { inner_ty : ty }
+  | Fallible of { pass_ty : ty; fail_ty : ty option }
+  | Array of { elem_ty : ty }
+  | ArrayRepeat of { elem_ty : ty; count_ty : ty }
+  | Tuple of { elem_tys : ty list }
   | Generic of { name : Musi_shared.Interner.symbol; args : ty list }
   | Where of { ty : ty; constraints : constraint_ list }
   | Infer
@@ -97,7 +97,7 @@ and expr_kind =
   | TraitExpr of { methods : stmt list }
   | FuncExpr of {
         params : param list
-      ; ret_typ : ty option
+      ; ret_ty : ty option
       ; body : stmt list option
     }
   | Bind of { mutable_ : bool; pat : pat; ty : ty option; init : expr }
