@@ -18,14 +18,14 @@ let test_empty () =
   check bool "empty source has no errors" false (Diagnostic.has_errors diags)
 
 let test_func_basic () =
-  let tokens, interner = make_parser "func f() {}" in
+  let tokens, interner = make_parser "proc f() {}" in
   let ast, diags = Parser.parse_program tokens interner in
   check bool "function has no errors" false (Diagnostic.has_errors diags);
   check int "one declaration" 1 (List.length ast)
 
 let test_func_with_params () =
   let tokens, interner =
-    make_parser "func add(x: Int, y: Int) -> Int { return x + y; }"
+    make_parser "proc add(x: Int, y: Int) -> Int { return x + y; }"
   in
   let ast, diags = Parser.parse_program tokens interner in
   check
@@ -38,14 +38,14 @@ let test_func_with_params () =
 let test_literals () =
   let tokens, interner =
     make_parser
-      "func test() { const x := 42; const y := true; const z := \"hello\"; }"
+      "proc test() { const x := 42; const y := true; const z := \"hello\"; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "literals parse without errors" false (Diagnostic.has_errors diags)
 
 let test_binary_ops () =
   let tokens, interner =
-    make_parser "func test() { const x := 1 + 2 * 3; const y := x < 5; }"
+    make_parser "proc test() { const x := 1 + 2 * 3; const y := x < 5; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -56,14 +56,14 @@ let test_binary_ops () =
 
 let test_if_then_else () =
   let tokens, interner =
-    make_parser "func test() { if true then { return 1; } else { return 0; } }"
+    make_parser "proc test() { if true then { return 1; } else { return 0; } }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "if-else parses without errors" false (Diagnostic.has_errors diags)
 
 let test_while_loop () =
   let tokens, interner =
-    make_parser "func test() { var i := 0; while i < 10 { i <- i + 1; } }"
+    make_parser "proc test() { var i := 0; while i < 10 { i <- i + 1; } }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -74,7 +74,7 @@ let test_while_loop () =
 
 let test_bindings () =
   let tokens, interner =
-    make_parser "func test() { const x := 42; var y := 0; y <- 1; }"
+    make_parser "proc test() { const x := 42; var y := 0; y <- 1; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -84,7 +84,7 @@ let test_bindings () =
     (Diagnostic.has_errors diags)
 
 let test_func_calls () =
-  let tokens, interner = make_parser "func test() { const x := add(1, 2); }" in
+  let tokens, interner = make_parser "proc test() { const x := add(1, 2); }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -93,12 +93,12 @@ let test_func_calls () =
     (Diagnostic.has_errors diags)
 
 let test_blocks () =
-  let tokens, interner = make_parser "func test() { { const x := 1; } }" in
+  let tokens, interner = make_parser "proc test() { { const x := 1; } }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "blocks parse without errors" false (Diagnostic.has_errors diags)
 
 let test_return_stmt () =
-  let tokens, interner = make_parser "func test() -> Int { return 42; }" in
+  let tokens, interner = make_parser "proc test() -> Int { return 42; }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -108,7 +108,7 @@ let test_return_stmt () =
 
 let test_unary_ops () =
   let tokens, interner =
-    make_parser "func test() { const x := -42; const y := not true; }"
+    make_parser "proc test() { const x := -42; const y := not true; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -118,7 +118,7 @@ let test_unary_ops () =
     (Diagnostic.has_errors diags)
 
 let test_cast_expr () =
-  let tokens, interner = make_parser "func test() { const x := 42 as Nat; }" in
+  let tokens, interner = make_parser "proc test() { const x := 42 as Nat; }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -127,7 +127,7 @@ let test_cast_expr () =
     (Diagnostic.has_errors diags)
 
 let test_test_expr () =
-  let tokens, interner = make_parser "func test() { const x := 42 is Nat; }" in
+  let tokens, interner = make_parser "proc test() { const x := 42 is Nat; }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -137,7 +137,7 @@ let test_test_expr () =
 
 let test_range_expr () =
   let tokens, interner =
-    make_parser "func test() { const x := 1..<10; const y := 1..10; }"
+    make_parser "proc test() { const x := 1..<10; const y := 1..10; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -148,7 +148,7 @@ let test_range_expr () =
 
 let test_field_access () =
   let tokens, interner =
-    make_parser "func test() { const x := obj.field; const y := tup.0; }"
+    make_parser "proc test() { const x := obj.field; const y := tup.0; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -159,7 +159,7 @@ let test_field_access () =
 
 let test_index_access () =
   let tokens, interner =
-    make_parser "func test() { const x := arr[0]; const y := map[\"key\"]; }"
+    make_parser "proc test() { const x := arr[0]; const y := map[\"key\"]; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -171,7 +171,7 @@ let test_index_access () =
 let test_tuples () =
   let tokens, interner =
     make_parser
-      "func test() { const x := (); const y := (,); const z := (1, 2, 3); }"
+      "proc test() { const x := (); const y := (,); const z := (1, 2, 3); }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -182,7 +182,7 @@ let test_tuples () =
 
 let test_arrays () =
   let tokens, interner =
-    make_parser "func test() { const x := []; const y := [1, 2, 3]; }"
+    make_parser "proc test() { const x := []; const y := [1, 2, 3]; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -193,7 +193,7 @@ let test_arrays () =
 
 let test_records () =
   let tokens, interner =
-    make_parser "func test() { const x := Point{ x := 1, y := 2 }; }"
+    make_parser "proc test() { const x := Point{ x := 1, y := 2 }; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -204,7 +204,7 @@ let test_records () =
 
 let test_nested_expressions () =
   let tokens, interner =
-    make_parser "func test() { const x := arr[obj.field].method(a, b)[0]; }"
+    make_parser "proc test() { const x := arr[obj.field].method(a, b)[0]; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -216,7 +216,7 @@ let test_nested_expressions () =
 let test_record_vs_block () =
   let tokens, interner =
     make_parser
-      "func test() { const x := A{ a := 1 }; const y := { const z := 2; }; }"
+      "proc test() { const x := A{ a := 1 }; const y := { const z := 2; }; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -227,7 +227,7 @@ let test_record_vs_block () =
 
 let test_complex_tuples () =
   let tokens, interner =
-    make_parser "func test() { const x := (a.b, [1, 2], Point{ x := 0 }); }"
+    make_parser "proc test() { const x := (a.b, [1, 2], Point{ x := 0 }); }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -238,7 +238,7 @@ let test_complex_tuples () =
 
 let test_precedence () =
   let tokens, interner =
-    make_parser "func test() { const x := a.b[0] + c * d as Type; }"
+    make_parser "proc test() { const x := a.b[0] + c * d as Type; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -249,7 +249,7 @@ let test_precedence () =
 
 let test_empty_containers () =
   let tokens, interner =
-    make_parser "func test() { const x := []; const y := (); const z := (,); }"
+    make_parser "proc test() { const x := []; const y := (); const z := (,); }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -261,7 +261,7 @@ let test_empty_containers () =
 let test_chained_access () =
   let tokens, interner =
     make_parser
-      "func test() { const x := obj.field.subfield[\"key\"][0].method(); }"
+      "proc test() { const x := obj.field.subfield[\"key\"][0].method(); }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -273,7 +273,7 @@ let test_chained_access () =
 let test_range_precedence () =
   let tokens, interner =
     make_parser
-      "func test() { const x := 1 + 2..<5 * 3; const y := a[0]..b.field; }"
+      "proc test() { const x := 1 + 2..<5 * 3; const y := a[0]..b.field; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -285,7 +285,7 @@ let test_range_precedence () =
 let test_all_operators () =
   let tokens, interner =
     make_parser
-      "func test() { const x := a ^ b * c / d mod e + f - g shl h shr i and j \
+      "proc test() { const x := a ^ b * c / d mod e + f - g shl h shr i and j \
        xor k or l; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
@@ -296,7 +296,7 @@ let test_all_operators () =
     (Diagnostic.has_errors diags)
 
 let test_operator_precedence () =
-  let tokens, interner = make_parser "func test() { const x := 2 ^ 3 ^ 4; }" in
+  let tokens, interner = make_parser "proc test() { const x := 2 ^ 3 ^ 4; }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -306,7 +306,7 @@ let test_operator_precedence () =
 
 let test_assignment_operator () =
   let tokens, interner =
-    make_parser "func test() { var x := 0; x <- x + 1; }"
+    make_parser "proc test() { var x := 0; x <- x + 1; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -316,7 +316,7 @@ let test_assignment_operator () =
     (Diagnostic.has_errors diags)
 
 let test_not_equal () =
-  let tokens, interner = make_parser "func test() { const x := a =/= b; }" in
+  let tokens, interner = make_parser "proc test() { const x := a =/= b; }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -325,7 +325,7 @@ let test_not_equal () =
     (Diagnostic.has_errors diags)
 
 let test_modifiers_export () =
-  let tokens, interner = make_parser "export const func foo() {}" in
+  let tokens, interner = make_parser "export const proc foo() {}" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -334,7 +334,7 @@ let test_modifiers_export () =
     (Diagnostic.has_errors diags)
 
 let test_modifiers_unsafe () =
-  let tokens, interner = make_parser "unsafe func bar() {}" in
+  let tokens, interner = make_parser "unsafe proc bar() {}" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -343,7 +343,7 @@ let test_modifiers_unsafe () =
     (Diagnostic.has_errors diags)
 
 let test_modifiers_async () =
-  let tokens, interner = make_parser "async func baz() {}" in
+  let tokens, interner = make_parser "async proc baz() {}" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -352,7 +352,7 @@ let test_modifiers_async () =
     (Diagnostic.has_errors diags)
 
 let test_modifiers_extern () =
-  let tokens, interner = make_parser "extern \"libc\" func malloc() {}" in
+  let tokens, interner = make_parser "extern \"libc\" proc malloc() {}" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -362,7 +362,7 @@ let test_modifiers_extern () =
 
 let test_modifiers_combined () =
   let tokens, interner =
-    make_parser "export const unsafe async func complex() {}"
+    make_parser "export const unsafe async proc complex() {}"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -372,7 +372,7 @@ let test_modifiers_combined () =
     (Diagnostic.has_errors diags)
 
 let test_decorators () =
-  let tokens, interner = make_parser "@inline func fast() {}" in
+  let tokens, interner = make_parser "@inline proc fast() {}" in
   let _ast, diags = Parser.parse_program tokens interner in
   check
     bool
@@ -382,7 +382,7 @@ let test_decorators () =
 
 let test_decorators_with_args () =
   let tokens, interner =
-    make_parser "@deprecated(\"use new_func instead\") func old() {}"
+    make_parser "@deprecated(\"use new_func instead\") proc old() {}"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -393,7 +393,7 @@ let test_decorators_with_args () =
 
 let test_decorators_and_modifiers () =
   let tokens, interner =
-    make_parser "@inline @deprecated export const func combo() {}"
+    make_parser "@inline @deprecated export const proc combo() {}"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
@@ -404,7 +404,7 @@ let test_decorators_and_modifiers () =
 
 let test_literal_suffixes () =
   let tokens, interner =
-    make_parser "func test() { const x := 42_i32; const y := 3.14_b64; }"
+    make_parser "proc test() { const x := 42_i32; const y := 3.14_b64; }"
   in
   let _ast, diags = Parser.parse_program tokens interner in
   check
