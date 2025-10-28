@@ -194,7 +194,7 @@ and parse_primary_expr t : Tree.expr =
   | Token.KwDefer -> parse_defer_expr t tok.span leading
   | Token.KwAsync -> parse_async_expr t tok.span leading
   | Token.KwAwait -> parse_await_expr t tok.span leading
-  | Token.KwFunc -> parse_func_expr t tok.span leading
+  | Token.KwProc -> parse_func_expr t tok.span leading
   | Token.TemplateHead _ -> parse_template_expr t tok.span leading
   | Token.NoSubstTemplateLit _ -> parse_template_expr t tok.span leading
   | _ ->
@@ -508,7 +508,7 @@ and parse_stmt t : Tree.stmt =
   let start = (Token.curr t.stream).span in
   let kind =
     match (Token.curr t.stream).kind with
-    | Token.KwFunc | Token.KwRecord | Token.KwChoice | Token.KwTrait
+    | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwTrait
     | Token.KwAlias ->
       error t "declarations not yet implemented in statement context" start;
       Tree.ExprStmt { expr = make_expr Tree.Error start [] }
@@ -692,6 +692,25 @@ let parse_program tokens interner =
         | Token.KwImport -> parse_import_decl t
         | Token.KwExport -> parse_export_decl t
         | Token.KwAlias -> parse_alias_decl t
+        | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwTrait ->
+          error t "declaration not yet implemented" (curr t).span;
+          let span = (curr t).span in
+          let rec skip_to_end depth =
+            match (curr t).kind with
+            | Token.Eof -> ()
+            | Token.LBrace ->
+              advance t;
+              skip_to_end (depth + 1)
+            | Token.RBrace when depth > 0 ->
+              advance t;
+              skip_to_end (depth - 1)
+            | Token.RBrace -> ()
+            | _ ->
+              advance t;
+              skip_to_end depth
+          in
+          skip_to_end 0;
+          make_decl Tree.Error span []
         | _ ->
           error t "expected declaration" (curr t).span;
           let span = (curr t).span in

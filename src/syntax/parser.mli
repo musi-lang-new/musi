@@ -1,6 +1,9 @@
 (** Parser state *)
 type t
 
+(** Parse a single statement *)
+val parse_stmt : t -> Tree.stmt
+
 (** Parse token list into AST program *)
 val parse_program :
      Token.token list
