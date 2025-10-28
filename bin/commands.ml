@@ -14,7 +14,13 @@ let compile input output_opt =
     let source = really_input_string ic (in_channel_length ic) in
     close_in ic;
     Musi.Compiler.print_diagnostics diags source;
-    Output.error "could not compile due to previous error(s)";
+    let error_count = diags.errors in
+    let msg =
+      if error_count = 1 then "could not compile due to previous error"
+      else
+        Printf.sprintf "could not compile due to %d previous errors" error_count
+    in
+    Output.error msg;
     1
 
 let check input =
@@ -37,7 +43,13 @@ let check input =
   in
   if Musi_shared.Diagnostic.has_errors all_diags then (
     Musi.Compiler.print_diagnostics all_diags source;
-    Output.error "could not check due to previous error(s)";
+    let error_count = all_diags.errors in
+    let msg =
+      if error_count = 1 then "could not check due to previous error"
+      else
+        Printf.sprintf "could not check due to %d previous errors" error_count
+    in
+    Output.error msg;
     1)
   else (
     Output.finished "type-checking completed";
