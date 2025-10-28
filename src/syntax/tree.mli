@@ -45,6 +45,7 @@ and pat_kind =
   | Choice of { member : Musi_shared.Interner.symbol; pat : pat option }
   | Or of { pats : pat list }
   | Rest of { name : Musi_shared.Interner.symbol option }
+  | ValueBinding of { name : Musi_shared.Interner.symbol; pat : pat }
   | Error
 
 and pat = {
