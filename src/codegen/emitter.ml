@@ -11,6 +11,8 @@ type t = {
   ; mutable next_local : int
   ; mutable code : Instr.instr list
   ; mutable pending_jumps : jump_patch list
+  ; mutable procs : Instr.proc_def list
+  ; proc_map : (Musi_shared.Interner.symbol, int) Hashtbl.t
 }
 
 let create interner =
@@ -21,6 +23,8 @@ let create interner =
   ; next_local = 0
   ; code = []
   ; pending_jumps = []
+  ; procs = []
+  ; proc_map = Hashtbl.create 16
   }
 
 (* ========================================
@@ -155,9 +159,10 @@ and emit_unary_expr t op operand =
 and emit_call_expr t (callee : Musi_syntax.Tree.expr) args =
   List.iter (emit_expr t) args;
   match callee.kind with
-  | Musi_syntax.Tree.Ident { name = _ } ->
-    let proc_id = 0 in
-    emit_instr t (Instr.Call proc_id)
+  | Musi_syntax.Tree.Ident { name } -> (
+    match Hashtbl.find_opt t.proc_map name with
+    | Some proc_id -> emit_instr t (Instr.Call proc_id)
+    | None -> ())
   | _ -> ()
 
 and emit_if_expr t cond then_br else_br =
@@ -257,21 +262,59 @@ let finalize_proc_code t param_count =
   let local_count = t.next_local - param_count in
   (param_count, local_count, proc_code)
 
-let _emit_proc t _name params _ret_ty body =
+let emit_proc t name params body =
+  reset_locals t;
+  t.code <- [];
   emit_proc_params t params;
   let param_count = List.length params in
-  emit_proc_body t body;
-  finalize_proc_code t param_count
+  (match body with
+  | Some stmts -> emit_proc_body t stmts
+  | None -> emit_instr t Instr.Ret);
+  let param_count, local_count, code = finalize_proc_code t param_count in
+  let proc_def =
+    {
+      Instr.name = Musi_shared.Interner.to_string t.interner name
+    ; param_count
+    ; local_count
+    ; code
+    }
+  in
+  let proc_id = List.length t.procs in
+  t.procs <- proc_def :: t.procs;
+  Hashtbl.add t.proc_map name proc_id
 
 (* ========================================
    PROGRAM EMISSION
    ======================================== *)
 
+let collect_procs t program =
+  List.iter
+    (fun (stmt : Musi_syntax.Tree.stmt) ->
+      match stmt.kind with
+      | Musi_syntax.Tree.Expr { expr } -> (
+        match expr.kind with
+        | Musi_syntax.Tree.Bind { pat; init; _ } -> (
+          match (pat.kind, init.kind) with
+          | ( Musi_syntax.Tree.Ident { name }
+            , Musi_syntax.Tree.Proc { params; body; _ } ) ->
+            emit_proc t name params body
+          | _ -> ())
+        | _ -> ())
+      | _ -> ())
+    program
+
 let emit_program_internal t program =
+  t.procs <- [];
+  Hashtbl.clear t.proc_map;
+  collect_procs t program;
   reset_locals t;
   t.code <- [];
   List.iter (emit_stmt t) program;
-  { Instr.constants = get_constant_pool t; procs = []; records = [] }
+  {
+    Instr.constants = get_constant_pool t
+  ; procs = List.rev t.procs
+  ; records = []
+  }
 
 (* ========================================
    PUBLIC API
