@@ -150,9 +150,9 @@ and infer_expr t (expr : Musi_syntax.Tree.expr) =
     resolve_ty t ty
   | Musi_syntax.Tree.Match _ | Musi_syntax.Tree.Array _
   | Musi_syntax.Tree.Tuple _ | Musi_syntax.Tree.ArrayRepeat _
-  | Musi_syntax.Tree.RecordLiteral _ | Musi_syntax.Tree.RecordExpr _
-  | Musi_syntax.Tree.ChoiceExpr _ | Musi_syntax.Tree.TraitExpr _
-  | Musi_syntax.Tree.FuncExpr _ | Musi_syntax.Tree.Assign _
+  | Musi_syntax.Tree.RecordLit _ | Musi_syntax.Tree.Record _
+  | Musi_syntax.Tree.Choice _ | Musi_syntax.Tree.Interface _
+  | Musi_syntax.Tree.Proc _ | Musi_syntax.Tree.Assign _
   | Musi_syntax.Tree.Return _ | Musi_syntax.Tree.Break _
   | Musi_syntax.Tree.Continue | Musi_syntax.Tree.While _
   | Musi_syntax.Tree.For _ | Musi_syntax.Tree.Field _ | Musi_syntax.Tree.Index _
