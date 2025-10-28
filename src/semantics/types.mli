@@ -1,15 +1,15 @@
-type typ =
+type ty =
   | Int
   | Nat
   | Bool
   | Text
   | Unit
-  | Proc of { params : typ list; ret : typ }
+  | Proc of { params : ty list; ret : ty }
   | Record of {
         name : Musi_shared.Interner.symbol
-      ; fields : (Musi_shared.Interner.symbol * typ) list
+      ; fields : (Musi_shared.Interner.symbol * ty) list
     }
   | Error
 
-val equal_typs : typ -> typ -> bool
-val typ_to_string : Musi_shared.Interner.t -> typ -> string
+val equal_typs : ty -> ty -> bool
+val typ_to_string : Musi_shared.Interner.t -> ty -> string
