@@ -181,7 +181,7 @@ and emit_block_expr t (stmts : Musi_syntax.Tree.stmt list) =
   | [] -> emit_instr t Instr.LdUnit
   | [ single_stmt ] -> (
     match single_stmt.kind with
-    | Musi_syntax.Tree.ExprStmt { expr } -> emit_expr t expr
+    | Musi_syntax.Tree.Expr { expr } -> emit_expr t expr
     | _ -> emit_instr t Instr.LdUnit)
   | _ -> emit_instr t Instr.LdUnit
 
@@ -205,6 +205,13 @@ and emit_expr t (expr : Musi_syntax.Tree.expr) =
   | Musi_syntax.Tree.If { cond; then_br; else_br } ->
     emit_if_expr t cond then_br else_br
   | Musi_syntax.Tree.Block { stmts } -> emit_block_expr t stmts
+  | Musi_syntax.Tree.Bind { pat; init; _ } -> (
+    emit_expr t init;
+    match pat.kind with
+    | Musi_syntax.Tree.Ident { name } ->
+      let idx = alloc_local t name in
+      emit_stloc t idx
+    | _ -> ())
   | Musi_syntax.Tree.UnitLit | Musi_syntax.Tree.Match _
   | Musi_syntax.Tree.Array _ | Musi_syntax.Tree.Tuple _
   | Musi_syntax.Tree.Field _ | Musi_syntax.Tree.Index _ | Musi_syntax.Tree.Try _
@@ -214,11 +221,11 @@ and emit_expr t (expr : Musi_syntax.Tree.expr) =
   | Musi_syntax.Tree.Template _ | Musi_syntax.Tree.BinLit _
   | Musi_syntax.Tree.RecordLiteral _ | Musi_syntax.Tree.RecordExpr _
   | Musi_syntax.Tree.ChoiceExpr _ | Musi_syntax.Tree.TraitExpr _
-  | Musi_syntax.Tree.FuncExpr _ | Musi_syntax.Tree.Bind _
-  | Musi_syntax.Tree.Assign _ | Musi_syntax.Tree.Return _
-  | Musi_syntax.Tree.Break _ | Musi_syntax.Tree.Continue
-  | Musi_syntax.Tree.While _ | Musi_syntax.Tree.For _
-  | Musi_syntax.Tree.ArrayRepeat _ | Musi_syntax.Tree.Error ->
+  | Musi_syntax.Tree.FuncExpr _ | Musi_syntax.Tree.Assign _
+  | Musi_syntax.Tree.Return _ | Musi_syntax.Tree.Break _
+  | Musi_syntax.Tree.Continue | Musi_syntax.Tree.While _
+  | Musi_syntax.Tree.For _ | Musi_syntax.Tree.ArrayRepeat _
+  | Musi_syntax.Tree.Error ->
     ()
 
 (* ========================================
@@ -227,7 +234,7 @@ and emit_expr t (expr : Musi_syntax.Tree.expr) =
 
 let emit_stmt t (stmt : Musi_syntax.Tree.stmt) =
   match stmt.kind with
-  | Musi_syntax.Tree.ExprStmt { expr } ->
+  | Musi_syntax.Tree.Expr { expr } ->
     emit_expr t expr;
     emit_instr t Instr.Pop
   | Musi_syntax.Tree.Error -> ()
@@ -250,7 +257,7 @@ let finalize_proc_code t param_count =
   let local_count = t.next_local - param_count in
   (param_count, local_count, proc_code)
 
-let emit_proc t _name params _ret_ty body =
+let _emit_proc t _name params _ret_ty body =
   emit_proc_params t params;
   let param_count = List.length params in
   emit_proc_body t body;
@@ -260,10 +267,17 @@ let emit_proc t _name params _ret_ty body =
    PROGRAM EMISSION
    ======================================== *)
 
+let emit_decl t (decl : Musi_syntax.Tree.decl) =
+  match decl.kind with
+  | Musi_syntax.Tree.Stmt { stmt } -> emit_stmt t stmt
+  | Musi_syntax.Tree.Import _ | Musi_syntax.Tree.Export _
+  | Musi_syntax.Tree.Alias _ | Musi_syntax.Tree.Error ->
+    ()
+
 let emit_program_internal t program =
   reset_locals t;
   t.code <- [];
-  let _ = program in
+  List.iter (emit_decl t) program;
   { Instr.constants = get_constant_pool t; procs = []; records = [] }
 
 (* ========================================
