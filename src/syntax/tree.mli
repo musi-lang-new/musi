@@ -1,5 +1,5 @@
 type trivia = Token.token list
-type typ_ref = int
+type ty_ref = int
 type symbol_ref = int
 
 type modifiers = {
@@ -12,7 +12,7 @@ type modifiers = {
 
 val default_modifiers : modifiers
 
-type typ_kind =
+type ty_kind =
   | Named of { name : Musi_shared.Interner.symbol }
   | Proc of { param_tys : ty list; ret_ty : ty }
   | Optional of { inner_ty : ty }
@@ -26,7 +26,7 @@ type typ_kind =
   | Error
 
 and ty = {
-    kind : typ_kind
+    kind : ty_kind
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
@@ -53,7 +53,7 @@ and pat = {
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
-  ; mutable ty : typ_ref option
+  ; mutable ty : ty_ref option
 }
 
 and template_part =
@@ -117,7 +117,7 @@ and expr = {
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
-  ; mutable ty : typ_ref option
+  ; mutable ty : ty_ref option
   ; mutable sym : symbol_ref option
 }
 
