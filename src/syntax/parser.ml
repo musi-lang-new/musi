@@ -514,10 +514,10 @@ and parse_stmt t : Tree.stmt =
     | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwInterface
     | Token.KwAlias ->
       error t "declarations not yet implemented in statement context" start;
-      Tree.ExprStmt { expr = make_expr Tree.Error start [] }
+      Tree.Expr { expr = make_expr Tree.Error start [] }
     | _ ->
       let expr = parse_expr_bp t 0 in
-      Tree.ExprStmt { expr }
+      Tree.Expr { expr }
   in
   let stmt = make_stmt kind start leading in
   { stmt with decorators; modifiers }
@@ -596,7 +596,7 @@ and parse_block_stmts t =
       List.rev acc
     else
       let expr = parse_expr t in
-      let stmt = make_stmt (Tree.ExprStmt { expr }) expr.span [] in
+      let stmt = make_stmt (Tree.Expr { expr }) expr.span [] in
 
       let is_last_expr = (curr t).kind = Token.RBrace in
       if is_last_expr then (
@@ -724,10 +724,9 @@ let parse_program tokens interner =
           skip_to_end 0;
           make_decl Tree.Error span []
         | _ ->
-          error t "expected declaration" (curr t).span;
-          let span = (curr t).span in
-          advance t;
-          make_decl Tree.Error span []
+          let stmt = parse_stmt t in
+          let _ = if (curr t).kind = Token.Semi then advance t in
+          make_decl (Tree.Stmt { stmt }) stmt.span []
       in
       loop ({ decl with Tree.decorators; modifiers } :: acc)
   in
