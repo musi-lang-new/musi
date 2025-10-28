@@ -73,17 +73,6 @@ let make_stmt (kind : Tree.stmt_kind) span leading : Tree.stmt =
 let make_ty (kind : Tree.ty_kind) span leading : Tree.ty =
   { Tree.kind; span; leading; trailing = [] }
 
-let make_decl (kind : Tree.decl_kind) span leading : Tree.decl =
-  {
-    Tree.kind
-  ; span
-  ; leading
-  ; trailing = []
-  ; decorators = []
-  ; modifiers = Tree.default_modifiers
-  ; sym = None
-  }
-
 let make_pat (kind : Tree.pat_kind) span leading : Tree.pat =
   { Tree.kind; span; leading; trailing = []; ty = None }
 
@@ -633,24 +622,24 @@ and parse_ty t : Tree.ty =
     make_ty Tree.Error tok.span leading
 
 (* ========================================
-   DECLARATION PARSING
+   STATEMENT PARSING
    ======================================== *)
 
-and parse_import_decl t : Tree.decl =
+and parse_import_stmt t : Tree.stmt =
   let leading = collect_trivia t in
   let start = (Token.curr t.stream).span in
   Token.advance t.stream;
-  error t "import declarations not implemented" start;
-  make_decl Tree.Error start leading
+  error t "import statements not implemented" start;
+  make_stmt Tree.Error start leading
 
-and parse_export_decl t : Tree.decl =
+and parse_export_stmt t : Tree.stmt =
   let leading = collect_trivia t in
   let start = (Token.curr t.stream).span in
   Token.advance t.stream;
-  error t "export declarations not implemented" start;
-  make_decl Tree.Error start leading
+  error t "export statements not implemented" start;
+  make_stmt Tree.Error start leading
 
-and parse_alias_decl t : Tree.decl =
+and parse_alias_stmt t : Tree.stmt =
   let leading = collect_trivia t in
   let start = (Token.curr t.stream).span in
   Token.advance t.stream;
@@ -667,7 +656,7 @@ and parse_alias_decl t : Tree.decl =
   let ty = parse_ty t in
   let _ = expect t Token.Semi in
   let span = make_span_to_curr t start in
-  make_decl (Tree.Alias { name; ty }) span leading
+  make_stmt (Tree.Alias { name; ty }) span leading
 
 and parse_params t = parse_separated parse_param Token.Comma Token.RParen t
 
@@ -699,13 +688,13 @@ let parse_program tokens interner =
     else
       let decorators = parse_decorators t in
       let modifiers = parse_modifiers t in
-      let decl =
+      let stmt =
         match (curr t).kind with
-        | Token.KwImport -> parse_import_decl t
-        | Token.KwExport -> parse_export_decl t
-        | Token.KwAlias -> parse_alias_decl t
+        | Token.KwImport -> parse_import_stmt t
+        | Token.KwExport -> parse_export_stmt t
+        | Token.KwAlias -> parse_alias_stmt t
         | Token.KwProc | Token.KwRecord | Token.KwChoice | Token.KwInterface ->
-          error t "declaration not yet implemented" (curr t).span;
+          error t "top-level declarations not yet implemented" (curr t).span;
           let span = (curr t).span in
           let rec skip_to_end depth =
             match (curr t).kind with
@@ -722,12 +711,12 @@ let parse_program tokens interner =
               skip_to_end depth
           in
           skip_to_end 0;
-          make_decl Tree.Error span []
+          make_stmt Tree.Error span []
         | _ ->
           let stmt = parse_stmt t in
           let _ = if (curr t).kind = Token.Semi then advance t in
-          make_decl (Tree.Stmt { stmt }) stmt.span []
+          stmt
       in
-      loop ({ decl with Tree.decorators; modifiers } :: acc)
+      loop ({ stmt with Tree.decorators; modifiers } :: acc)
   in
   (loop [], !(t.diags))
