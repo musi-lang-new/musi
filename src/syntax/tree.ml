@@ -21,18 +21,18 @@ let default_modifiers =
 
 type typ_kind =
   | Named of { name : Musi_shared.Interner.symbol }
-  | Proc of { param_typs : typ list; ret_typ : typ }
-  | Optional of { inner_typ : typ }
-  | Fallible of { pass_typ : typ; fail_typ : typ option }
-  | Array of { elem_typ : typ }
-  | ArrayRepeat of { elem_typ : typ; count_typ : typ }
-  | Tuple of { elem_typs : typ list }
-  | Generic of { name : Musi_shared.Interner.symbol; args : typ list }
-  | Where of { typ : typ; constraints : constraint_ list }
+  | Proc of { param_typs : ty list; ret_typ : ty }
+  | Optional of { inner_typ : ty }
+  | Fallible of { pass_typ : ty; fail_typ : ty option }
+  | Array of { elem_typ : ty }
+  | ArrayRepeat of { elem_typ : ty; count_typ : ty }
+  | Tuple of { elem_typs : ty list }
+  | Generic of { name : Musi_shared.Interner.symbol; args : ty list }
+  | Where of { ty : ty; constraints : constraint_ list }
   | Infer
   | Error
 
-and typ = {
+and ty = {
     kind : typ_kind
   ; span : Musi_shared.Span.t
   ; leading : trivia
@@ -60,7 +60,7 @@ and pat = {
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
-  ; mutable typ : typ_ref option
+  ; mutable ty : typ_ref option
 }
 
 and template_part =
@@ -69,7 +69,7 @@ and template_part =
 
 and param = {
     name : Musi_shared.Interner.symbol
-  ; typ : typ
+  ; ty : ty
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
@@ -97,10 +97,10 @@ and expr_kind =
   | TraitExpr of { methods : stmt list }
   | FuncExpr of {
         params : param list
-      ; ret_typ : typ option
+      ; ret_typ : ty option
       ; body : stmt list option
     }
-  | Bind of { mutable_ : bool; pat : pat; typ : typ option; init : expr }
+  | Bind of { mutable_ : bool; pat : pat; ty : ty option; init : expr }
   | Assign of { lhs : expr; rhs : expr }
   | Return of { value : expr option }
   | Break of { value : expr option }
@@ -114,8 +114,8 @@ and expr_kind =
   | Range of { start : expr; end_ : expr; inclusive : bool }
   | Async of { expr : expr }
   | Await of { expr : expr }
-  | Cast of { expr : expr; typ : typ }
-  | Test of { expr : expr; typ : typ }
+  | Cast of { expr : expr; ty : ty }
+  | Test of { expr : expr; ty : ty }
   | Template of { parts : template_part list }
   | Error
 
@@ -124,7 +124,7 @@ and expr = {
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
-  ; mutable typ : typ_ref option
+  ; mutable ty : typ_ref option
   ; mutable sym : symbol_ref option
 }
 
@@ -151,7 +151,7 @@ and stmt = {
 
 and field = {
     name : Musi_shared.Interner.symbol
-  ; typ : typ
+  ; ty : ty
   ; default_value : expr option
   ; span : Musi_shared.Span.t
   ; leading : trivia
@@ -160,7 +160,7 @@ and field = {
 
 and choice_case = {
     name : Musi_shared.Interner.symbol
-  ; typ : typ option
+  ; ty : ty option
   ; span : Musi_shared.Span.t
   ; leading : trivia
   ; trailing : trivia
@@ -174,7 +174,7 @@ and decorator = {
 
 and constraint_ = {
     intf : Musi_shared.Interner.symbol
-  ; args : typ list
+  ; args : ty list
   ; span : Musi_shared.Span.t
 }
 
@@ -198,7 +198,7 @@ and decl_kind =
         path : Musi_shared.Interner.symbol option
       ; kind : import_export_kind
     }
-  | Alias of { name : Musi_shared.Interner.symbol; typ : typ }
+  | Alias of { name : Musi_shared.Interner.symbol; ty : ty }
   | Error
 
 and decl = {
