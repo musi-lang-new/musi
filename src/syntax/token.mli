@@ -44,6 +44,7 @@ type t =
   | KwFrom
   | KwIf
   | KwImport
+  | KwInterface
   | KwIn
   | KwIs
   | KwMatch
