@@ -135,7 +135,15 @@ and match_case = {
   ; trailing : trivia
 }
 
-and stmt_kind = Expr of { expr : expr } | Error
+and stmt_kind =
+  | Expr of { expr : expr }
+  | Import of { path : Musi_shared.Interner.symbol; kind : import_export_kind }
+  | Export of {
+        path : Musi_shared.Interner.symbol option
+      ; kind : import_export_kind
+    }
+  | Alias of { name : Musi_shared.Interner.symbol; ty : ty }
+  | Error
 
 and stmt = {
     kind : stmt_kind
@@ -190,24 +198,4 @@ and import_export_kind =
       ; items : import_export_item list option
     }
 
-and decl_kind =
-  | Import of { path : Musi_shared.Interner.symbol; kind : import_export_kind }
-  | Export of {
-        path : Musi_shared.Interner.symbol option
-      ; kind : import_export_kind
-    }
-  | Alias of { name : Musi_shared.Interner.symbol; ty : ty }
-  | Stmt of { stmt : stmt }
-  | Error
-
-and decl = {
-    kind : decl_kind
-  ; span : Musi_shared.Span.t
-  ; leading : trivia
-  ; trailing : trivia
-  ; decorators : decorator list
-  ; modifiers : modifiers
-  ; mutable sym : symbol_ref option
-}
-
-type program = decl list
+type program = stmt list
