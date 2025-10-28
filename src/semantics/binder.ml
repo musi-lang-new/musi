@@ -214,15 +214,16 @@ and bind_param t (param : Musi_syntax.Tree.param) =
 
 and bind_stmt t (stmt : Musi_syntax.Tree.stmt) =
   match stmt.kind with
-  | Musi_syntax.Tree.ExprStmt { expr } -> bind_expr t expr
+  | Musi_syntax.Tree.Expr { expr } -> bind_expr t expr
   | Musi_syntax.Tree.Error -> ()
 
 (* ========================================
    DECLARATION BINDING
    ======================================== *)
 
-let bind_decl _t (decl : Musi_syntax.Tree.decl) =
+let bind_decl t (decl : Musi_syntax.Tree.decl) =
   match decl.kind with
+  | Musi_syntax.Tree.Stmt { stmt } -> bind_stmt t stmt
   | Musi_syntax.Tree.Import _ | Musi_syntax.Tree.Export _
   | Musi_syntax.Tree.Alias _ ->
     ()
