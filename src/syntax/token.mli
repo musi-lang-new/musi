@@ -58,7 +58,6 @@ type t =
   | KwShl
   | KwShr
   | KwThen
-  | KwTrait
   | KwTrue
   | KwTry
   | KwUnsafe

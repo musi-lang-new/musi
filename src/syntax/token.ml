@@ -42,6 +42,7 @@ type t =
   | KwFrom
   | KwIf
   | KwImport
+  | KwInterface
   | KwIn
   | KwIs
   | KwMatch
@@ -55,7 +56,6 @@ type t =
   | KwShl
   | KwShr
   | KwThen
-  | KwInterface
   | KwTrue
   | KwTry
   | KwUnsafe
