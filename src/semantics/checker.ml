@@ -275,23 +275,15 @@ and infer_block_expr t stmts =
 and check_stmt t (stmt : Musi_syntax.Tree.stmt) =
   match stmt.kind with
   | Musi_syntax.Tree.Expr { expr } -> ignore (infer_expr t expr)
-  | Musi_syntax.Tree.Error -> ()
-
-(* ========================================
-   DECLARATION TYPE CHECKING
-   ======================================== *)
-
-let check_decl t (decl : Musi_syntax.Tree.decl) =
-  match decl.kind with
-  | Musi_syntax.Tree.Stmt { stmt } -> check_stmt t stmt
   | Musi_syntax.Tree.Import _ | Musi_syntax.Tree.Export _
-  | Musi_syntax.Tree.Alias _ | Musi_syntax.Tree.Error ->
+  | Musi_syntax.Tree.Alias _ ->
     ()
+  | Musi_syntax.Tree.Error -> ()
 
 (* ========================================
    PUBLIC API
    ======================================== *)
 
 let check_program t program =
-  List.iter (check_decl t) program;
+  List.iter (check_stmt t) program;
   !(t.diags)

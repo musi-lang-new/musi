@@ -52,7 +52,7 @@ let rec bind_expr t (expr : Musi_syntax.Tree.expr) =
     bind_expr t expr
   | Musi_syntax.Tree.Bind { mutable_; pat; ty; init } ->
     bind_expr t init;
-    bind_bind_expr t expr mutable_ pat ty
+    bind_bind_expr t expr mutable_ pat ty init
   | Musi_syntax.Tree.Assign { lhs; rhs } -> bind_assign_expr t expr lhs rhs
   | Musi_syntax.Tree.Return { value } | Musi_syntax.Tree.Break { value } ->
     Option.iter (bind_expr t) value
@@ -111,28 +111,30 @@ and bind_ident_expr t expr name =
         !(t.syms.diags)
         (Musi_shared.Diagnostic.error msg expr.span)
 
-and bind_bind_expr t expr mutable_ pat ty =
+and bind_bind_expr t expr mutable_ pat ty init =
   match pat.Musi_syntax.Tree.kind with
-  | Musi_syntax.Tree.Ident { name } -> bind_bind_ident t expr mutable_ name ty
+  | Musi_syntax.Tree.Ident { name } ->
+    bind_bind_ident t expr mutable_ name ty init
   | _ -> bind_pat t pat
 
-and bind_bind_ident t expr mutable_ name ty =
-  match expr.kind with
-  | Musi_syntax.Tree.Bind { init; _ } -> (
-    match init.kind with
-    | Musi_syntax.Tree.Proc { params; ret_ty; _ } ->
-      let sym =
-        { Symbol.name; kind = Symbol.Proc { params; ret_ty }; span = expr.span }
-      in
-      Symbol.define t.syms sym
-    | _ ->
-      let sym =
-        { Symbol.name; kind = Symbol.Bind { mutable_; ty }; span = expr.span }
-      in
-      Symbol.define t.syms sym)
+and bind_bind_ident t bind_expr mutable_ name ty init =
+  match init.kind with
+  | Musi_syntax.Tree.Proc { params; ret_ty; _ } ->
+    let sym =
+      {
+        Symbol.name
+      ; kind = Symbol.Proc { params; ret_ty }
+      ; span = bind_expr.span
+      }
+    in
+    Symbol.define t.syms sym
   | _ ->
     let sym =
-      { Symbol.name; kind = Symbol.Bind { mutable_; ty }; span = expr.span }
+      {
+        Symbol.name
+      ; kind = Symbol.Bind { mutable_; ty }
+      ; span = bind_expr.span
+      }
     in
     Symbol.define t.syms sym
 
@@ -230,15 +232,6 @@ and bind_param t (param : Musi_syntax.Tree.param) =
 and bind_stmt t (stmt : Musi_syntax.Tree.stmt) =
   match stmt.kind with
   | Musi_syntax.Tree.Expr { expr } -> bind_expr t expr
-  | Musi_syntax.Tree.Error -> ()
-
-(* ========================================
-   DECLARATION BINDING
-   ======================================== *)
-
-let bind_decl t (decl : Musi_syntax.Tree.decl) =
-  match decl.kind with
-  | Musi_syntax.Tree.Stmt { stmt } -> bind_stmt t stmt
   | Musi_syntax.Tree.Import _ | Musi_syntax.Tree.Export _
   | Musi_syntax.Tree.Alias _ ->
     ()
@@ -249,5 +242,5 @@ let bind_decl t (decl : Musi_syntax.Tree.decl) =
    ======================================== *)
 
 let bind_program t program =
-  List.iter (bind_decl t) program;
+  List.iter (bind_stmt t) program;
   !(t.syms.diags)
