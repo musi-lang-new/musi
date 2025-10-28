@@ -139,7 +139,7 @@ and match_case = {
   ; trailing : trivia
 }
 
-and stmt_kind = ExprStmt of { expr : expr } | Error
+and stmt_kind = Expr of { expr : expr } | Error
 
 and stmt = {
     kind : stmt_kind
@@ -201,6 +201,7 @@ and decl_kind =
       ; kind : import_export_kind
     }
   | Alias of { name : Musi_shared.Interner.symbol; ty : ty }
+  | Stmt of { stmt : stmt }
   | Error
 
 and decl = {
