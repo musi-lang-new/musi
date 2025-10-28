@@ -89,8 +89,8 @@ and expr_kind =
   | Continue
   | While of { cond : expr; body : stmt list }
   | For of { pat : pat; iter : expr; body : stmt list }
-  | FieldAccess of { receiver : expr; field : Musi_shared.Interner.symbol }
-  | IndexAccess of { receiver : expr; index : expr }
+  | Field of { receiver : expr; field : Musi_shared.Interner.symbol }
+  | Index of { receiver : expr; index : expr }
   | Try of { expr : expr }
   | Defer of { expr : expr }
   | Range of { start : expr; end_ : expr; inclusive : bool }
