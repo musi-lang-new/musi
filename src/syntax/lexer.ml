@@ -87,7 +87,7 @@ let validate_utf8_char t pos =
 
 let validate_unicode_codepoint code pos t =
   if code > max_unicode_codepoint then (
-    error t "invalid unicode codepoint out of range" pos;
+    error t "unicode codepoint out of range" pos;
     false)
   else if code >= surrogate_start && code <= surrogate_end then (
     error t "invalid unicode codepoint in surrogate range" pos;
@@ -315,7 +315,10 @@ let process_escape_char t =
     | 'u' -> scan_unicode_escape t
     | 'U' -> scan_unicode_escape_fixed t 8
     | c ->
-      error t ("unknown escape sequence '\\" ^ String.make 1 c ^ "'") (t.pos - 1);
+      error
+        t
+        ("unknown escape sequence: '\\" ^ String.make 1 c ^ "'")
+        (t.pos - 1);
       c
 
 (* ========================================
@@ -569,7 +572,7 @@ let scan_symbol t start =
     advance_n t (String.length sym);
     Token.make kind (make_span t start)
   | None ->
-    error t (Printf.sprintf "invalid character '%c'" (curr_char t)) start;
+    error t (Printf.sprintf "invalid character: '%c'" (curr_char t)) start;
     advance t;
     Token.make Token.Error (make_span t start)
 
