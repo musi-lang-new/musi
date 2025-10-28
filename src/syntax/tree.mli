@@ -165,7 +165,7 @@ and decorator = {
 }
 
 and constraint_ = {
-    trait : Musi_shared.Interner.symbol
+    intf : Musi_shared.Interner.symbol
   ; args : typ list
   ; span : Musi_shared.Span.t
 }
