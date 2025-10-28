@@ -194,16 +194,12 @@ and infer_expr t (expr : Musi_syntax.Tree.expr) =
     error t "expression type checking not yet implemented" expr.span
   | Musi_syntax.Tree.Error -> Types.Error
 
-and infer_ident_expr t expr name =
-  match Hashtbl.find_opt t.env name with
+and infer_ident_expr t _expr _name =
+  match Hashtbl.find_opt t.env _name with
   | Some ty -> ty
   | None ->
-    error
-      t
-      (Printf.sprintf
-         "undeclared identifier: '%s'"
-         (Musi_shared.Interner.to_string t.interner name))
-      expr.span
+    (* Binder already reported undeclared identifiers *)
+    Types.Error
 
 and infer_binary_expr t expr op lhs rhs =
   let lhs_ty = infer_expr t lhs in
