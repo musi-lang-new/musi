@@ -22,6 +22,8 @@ type ty_kind =
   | Tuple of { elem_tys : ty list }
   | Generic of { name : Musi_shared.Interner.symbol; args : ty list }
   | Where of { ty : ty; constraints : constraint_ list }
+  | Ptr of { inner : ty }
+  | Ref of { inner : ty }
   | Infer
   | Error
 
