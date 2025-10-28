@@ -1,7 +1,7 @@
 (library
  (public_name musi.shared)
  (name musi_shared)
- (modules interner span source diagnostic))
+ (modules :standard \ test_diagnostic test_interner test_span))
 
 (test
  (name test_diagnostic)

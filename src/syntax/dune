@@ -1,7 +1,7 @@
 (library
  (public_name musi.syntax)
  (name musi_syntax)
- (modules token lexer parser tree)
+ (modules :standard \ test_lexer test_parser)
  (libraries musi.shared))
 
 (test
