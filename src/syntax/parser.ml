@@ -160,7 +160,7 @@ and parse_ident_expr t sym tok_span leading =
       let span = make_span_to_curr t tok_span in
       make_expr (Tree.RecordLiteral { fields }) span leading)
     else (
-      error t "expected { after ." (curr t).span;
+      error t "expected '{' after '.'" (curr t).span;
       make_expr (Tree.Ident { name = sym }) tok_span leading))
   else make_expr (Tree.Ident { name = sym }) tok_span leading
 
