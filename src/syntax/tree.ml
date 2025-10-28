@@ -58,8 +58,8 @@ and param = {
 }
 
 and expr_kind =
-  | IntLit of { value : string }
-  | BinLit of { value : string }
+  | IntLit of { value : string; suffix : Token.suffix option }
+  | BinLit of { value : string; suffix : Token.suffix option }
   | TextLit of { value : Musi_shared.Interner.symbol }
   | BoolLit of { value : bool }
   | UnitLit
