@@ -87,10 +87,18 @@ let validate_utf8_char t pos =
 
 let validate_unicode_codepoint code pos t =
   if code > max_unicode_codepoint then (
-    error t "unicode codepoint out of range" pos;
+    error
+      t
+      (Printf.sprintf "codepoint 'U+%X' exceeds maximum 'U+10FFFF'" code)
+      pos;
     false)
   else if code >= surrogate_start && code <= surrogate_end then (
-    error t "invalid unicode codepoint in surrogate range" pos;
+    error
+      t
+      (Printf.sprintf
+         "codepoint 'U+%X' in surrogate range [U+D800, U+DFFF]"
+         code)
+      pos;
     false)
   else true
 
@@ -223,17 +231,22 @@ let check_numeric_overflow t text start =
 let check_leading_zeros t start =
   if
     t.pos > start + 1 && t.source.[start] = '0' && is_digit t.source.[start + 1]
-  then error t "integer literal has leading zeros" start
+  then error t "leading zeros not allowed in decimal literals" start
 
 let scan_unicode_escape_braced t =
   advance t;
   let start = t.pos in
   consume_while t (fun c -> hex_to_int c >= 0);
   if curr_char t <> '}' then (
-    error t "malformed unicode escape" t.pos;
+    error
+      t
+      (Printf.sprintf
+         "missing '}' after unicode escape, found '%c'"
+         (curr_char t))
+      t.pos;
     '\x00')
   else if t.pos = start then (
-    error t "malformed unicode escape" t.pos;
+    error t "empty unicode escape: '\\u{}'" t.pos;
     advance t;
     '\x00')
   else
@@ -245,7 +258,10 @@ let scan_unicode_escape_braced t =
       then unicode_to_utf8_char code
       else '\x00'
     with _ ->
-      error t "malformed unicode escape" (t.pos - String.length hex_str - 2);
+      error
+        t
+        (Printf.sprintf "invalid hex in unicode escape: '%s'" hex_str)
+        (t.pos - String.length hex_str - 2);
       '\x00'
 
 let scan_unicode_escape_fixed t len =
@@ -253,12 +269,20 @@ let scan_unicode_escape_fixed t len =
   let rec collect_hex acc i =
     if i >= len then acc
     else if at_end t then (
-      error t "malformed unicode escape" start;
+      error
+        t
+        (Printf.sprintf "unicode escape needs %d hex digits, found %d" len i)
+        start;
       acc)
     else
       let digit = hex_to_int (curr_char t) in
       if digit = -1 then (
-        error t "malformed unicode escape" t.pos;
+        error
+          t
+          (Printf.sprintf
+             "non-hex character '%c' in unicode escape"
+             (curr_char t))
+          t.pos;
         acc)
       else (
         advance t;
@@ -274,22 +298,30 @@ let scan_unicode_escape t =
 
 let scan_hex_escape t =
   if at_end t then (
-    error t "unterminated escape sequence at end of file" t.pos;
+    error t "'\\x' escape needs 2 hex digits" t.pos;
     '\x00')
   else
     let hi = hex_to_int (curr_char t) in
     if hi = -1 then (
-      error t "invalid hex digit in escape sequence" t.pos;
+      error
+        t
+        (Printf.sprintf "non-hex character '%c' in '\\x' escape" (curr_char t))
+        t.pos;
       '\x00')
     else (
       advance t;
       if at_end t then (
-        error t "unterminated escape sequence at end of file" t.pos;
+        error t "'\\x' escape needs 2 hex digits, found 1" t.pos;
         '\x00')
       else
         let lo = hex_to_int (curr_char t) in
         if lo = -1 then (
-          error t "invalid hex digit in escape sequence" t.pos;
+          error
+            t
+            (Printf.sprintf
+               "non-hex character '%c' in '\\x' escape"
+               (curr_char t))
+            t.pos;
           '\x00')
         else (
           advance t;
@@ -297,7 +329,7 @@ let scan_hex_escape t =
 
 let process_escape_char t =
   if at_end t then (
-    error t "unterminated escape sequence at end of file" t.pos;
+    error t "incomplete escape at end of file" t.pos;
     '\x00')
   else
     let c = curr_char t in
@@ -315,10 +347,7 @@ let process_escape_char t =
     | 'u' -> scan_unicode_escape t
     | 'U' -> scan_unicode_escape_fixed t 8
     | c ->
-      error
-        t
-        ("unknown escape sequence: '\\" ^ String.make 1 c ^ "'")
-        (t.pos - 1);
+      error t (Printf.sprintf "unknown escape: '\\%c'" c) (t.pos - 1);
       c
 
 (* ========================================
@@ -333,10 +362,10 @@ let scan_suffix t =
     match suffix_of_string suffix_text with
     | Some s -> Some s
     | None ->
-      error t ("invalid suffix '" ^ suffix_text ^ "' on numeric literal") start;
+      error t (Printf.sprintf "unknown suffix: '%s'" suffix_text) start;
       None)
   else if t.pos > 0 && t.source.[t.pos - 1] = '_' then (
-    error t "empty numeric suffix" (t.pos - 1);
+    error t "suffix cannot be empty" (t.pos - 1);
     None)
   else None
 
@@ -344,12 +373,16 @@ let scan_scientific_notation t =
   advance t;
   if curr_char t = '+' || curr_char t = '-' then advance t;
   if not (is_digit (curr_char t)) then
-    error t "invalid scientific notation" t.pos
+    error
+      t
+      (Printf.sprintf "exponent has no digits, found '%c'" (curr_char t))
+      t.pos
   else consume_while t is_number_char
 
 let scan_binary_number t start =
   advance_n t 2;
-  if not (is_bdigit (curr_char t)) then error t "invalid binary literal" start;
+  if not (is_bdigit (curr_char t)) then
+    error t (Printf.sprintf "binary literal has no digits after '0b'") start;
   consume_while t (fun c -> is_bdigit c || c = '_');
   let suffix = scan_suffix t in
   let text = slice t start in
@@ -360,8 +393,9 @@ let scan_binary_number t start =
 let scan_octal_number t start =
   advance_n t 2;
   if t.source.[start + 1] = 'O' then
-    warning t "use lowercase 'o' in octal literals" (start + 1);
-  if not (is_odigit (curr_char t)) then error t "invalid octal literal" start;
+    warning t "octal prefix should be '0o', not '0O'" (start + 1);
+  if not (is_odigit (curr_char t)) then
+    error t "octal literal has no digits after '0o'" start;
   consume_while t (fun c -> is_odigit c || c = '_');
   let suffix = scan_suffix t in
   let text = slice t start in
@@ -371,7 +405,8 @@ let scan_octal_number t start =
 
 let scan_hex_number t start =
   advance_n t 2;
-  if hex_to_int (curr_char t) = -1 then error t "invalid hex literal" start;
+  if hex_to_int (curr_char t) = -1 then
+    error t "hex literal has no digits after '0x'" start;
   consume_while t (fun c -> hex_to_int c >= 0 || c = '_');
   let suffix = scan_suffix t in
   let text = slice t start in
@@ -430,7 +465,12 @@ let scan_number t start =
 let scan_quoted_content t buf quote_char =
   while (not (at_end t)) && curr_char t <> quote_char && curr_char t <> '\n' do
     if not (validate_utf8_char t t.pos) then
-      error t "invalid UTF-8 sequence" t.pos;
+      error
+        t
+        (Printf.sprintf
+           "invalid UTF-8 byte: '0x%02X'"
+           (Char.code t.source.[t.pos]))
+        t.pos;
     if curr_char t = '\\' then (
       advance t;
       Buffer.add_char buf (process_escape_char t))
@@ -443,7 +483,8 @@ let scan_text_lit t start =
   advance t;
   let buf = Buffer.create 64 in
   scan_quoted_content t buf '"';
-  if curr_char t <> '"' then error t "unterminated text literal" start
+  if curr_char t <> '"' then
+    error t "missing closing '\"' for text literal" start
   else advance t;
   let text = Buffer.contents buf in
   Token.make
@@ -453,7 +494,7 @@ let scan_text_lit t start =
 let scan_rune_lit t start =
   advance t;
   if at_end t then (
-    error t "empty rune literal" start;
+    error t "rune literal cannot be empty" start;
     Token.make Token.Error (make_span t start))
   else
     let c =
@@ -465,7 +506,8 @@ let scan_rune_lit t start =
         advance t;
         c
     in
-    if curr_char t <> '\'' then error t "unterminated rune literal" start
+    if curr_char t <> '\'' then
+      error t "missing closing '\'' for rune literal" start
     else advance t;
     Token.make (Token.RuneLit (Char.code c)) (make_span t start)
 
@@ -475,7 +517,12 @@ let scan_template_lit t start =
   let scan_content () =
     while (not (at_end t)) && curr_char t <> '`' && curr_char t <> '$' do
       if not (validate_utf8_char t t.pos) then
-        error t "invalid UTF-8 sequence" t.pos;
+        error
+          t
+          (Printf.sprintf
+             "invalid UTF-8 byte: '0x%02X'"
+             (Char.code t.source.[t.pos]))
+          t.pos;
       if curr_char t = '\\' then (
         advance t;
         Buffer.add_char buf (process_escape_char t))
@@ -501,7 +548,7 @@ let scan_template_lit t start =
            (Musi_shared.Interner.intern t.interner content))
         (make_span t start))
     else (
-      error t "unterminated template literal" start;
+      error t "missing closing '`' for template literal" start;
       Token.make Token.Error (make_span t start))
   in
   scan_content ()
@@ -538,7 +585,7 @@ let scan_block_comment t start =
       decr depth)
     else advance t
   done;
-  if !depth > 0 then error t "unterminated block comment" start;
+  if !depth > 0 then error t "missing '*/' to close block comment" start;
   let content_end = if !depth = 0 then t.pos - 2 else t.pos in
   let text =
     if content_end > content_start then
