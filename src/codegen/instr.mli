@@ -172,6 +172,4 @@ type program = {
 }
 
 val encode_instr : instr -> bytes
-val serialize_proc : proc_def -> bytes
-val serialize_procs : proc_def list -> bytes
 val encode_program : program -> bytes
