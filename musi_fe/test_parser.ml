@@ -360,6 +360,19 @@ let test_modifiers_extern () =
     false
     (Diagnostic.has_errors diags)
 
+let test_extern_intrinsic_proc () =
+  let tokens, interner =
+    make_parser
+      "unsafe extern \"intrinsic\" proc __builtin_writeln(text: Text);"
+  in
+  let ast, diags = Parser.parse_program tokens interner in
+  check
+    bool
+    "extern intrinsic proc declaration parses without errors"
+    false
+    (Diagnostic.has_errors diags);
+  check int "one declaration" 1 (List.length ast)
+
 let test_modifiers_combined () =
   let tokens, interner =
     make_parser "export const unsafe async proc complex() {}"
@@ -503,6 +516,7 @@ let () =
         ; test_case "modifiers_async" `Quick test_modifiers_async
         ; test_case "modifiers_extern" `Quick test_modifiers_extern
         ; test_case "modifiers_combined" `Quick test_modifiers_combined
+        ; test_case "extern_intrinsic_proc" `Quick test_extern_intrinsic_proc
         ] )
     ; ( "Decorators"
       , [
