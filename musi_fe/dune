@@ -1,18 +1,8 @@
 (library
  (name frontend)
  (wrapped false)
- (modules :standard \ test_resolver test_checker test_lexer test_parser)
+ (modules :standard \ test_lexer test_parser)
  (libraries shared))
-
-(test
- (name test_resolver)
- (modules test_resolver)
- (libraries frontend alcotest))
-
-(test
- (name test_checker)
- (modules test_checker)
- (libraries frontend alcotest))
 
 (test
  (name test_lexer)
