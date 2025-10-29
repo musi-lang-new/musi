@@ -1,3 +1,6 @@
+(** Token types and utilities. *)
+
+(** Numeric literal suffixes. *)
 type suffix =
   | I8
   | I16
@@ -129,17 +132,14 @@ let kind_to_string interner = function
   | Ident sym -> Interner.to_string interner sym
   | IntLit (s, _) -> s
   | FloatLit (s, _) -> s
-  | TextLit sym ->
-    Printf.sprintf "\"%s\"" (Interner.to_string interner sym)
+  | TextLit sym -> Printf.sprintf "\"%s\"" (Interner.to_string interner sym)
   | RuneLit c -> Printf.sprintf "'%c'" (Char.chr c)
   | NoSubstTemplateLit sym ->
     Printf.sprintf "`%s`" (Interner.to_string interner sym)
-  | TemplateHead sym ->
-    Printf.sprintf "`%s${" (Interner.to_string interner sym)
+  | TemplateHead sym -> Printf.sprintf "`%s${" (Interner.to_string interner sym)
   | TemplateMiddle sym ->
     Printf.sprintf "}%s${" (Interner.to_string interner sym)
-  | TemplateTail sym ->
-    Printf.sprintf "}%s`" (Interner.to_string interner sym)
+  | TemplateTail sym -> Printf.sprintf "}%s`" (Interner.to_string interner sym)
   | KwAlias -> "alias"
   | KwAnd -> "and"
   | KwAs -> "as"
