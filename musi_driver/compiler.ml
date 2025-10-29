@@ -8,13 +8,15 @@ let compile_string source =
   let lexer = Lexer.make file_id source interner in
   let tokens, lex_diags = Lexer.lex lexer in
   let ast, parse_diags = Parser.parse_program tokens interner in
+  let stdlib_ast = Stdlib.load_stdlib interner in
   let binder = Binder.create interner in
+  let stdlib_bind_diags = Binder.bind_program binder stdlib_ast in
   let bind_diags = Binder.bind_program binder ast in
   let checker = Checker.create interner binder.syms in
   let check_diags = Checker.check_program checker ast in
   let all_diags =
     Diagnostic.merge
-      [ lex_diags; parse_diags; bind_diags; check_diags ]
+      [ lex_diags; parse_diags; stdlib_bind_diags; bind_diags; check_diags ]
   in
   if Diagnostic.has_errors all_diags then Failure all_diags
   else
