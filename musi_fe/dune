@@ -1,0 +1,25 @@
+(library
+ (name frontend)
+ (wrapped false)
+ (modules :standard \ test_binder test_checker test_lexer test_parser)
+ (libraries shared))
+
+(test
+ (name test_binder)
+ (modules test_binder)
+ (libraries frontend alcotest))
+
+(test
+ (name test_checker)
+ (modules test_checker)
+ (libraries frontend alcotest))
+
+(test
+ (name test_lexer)
+ (modules test_lexer)
+ (libraries frontend alcotest))
+
+(test
+ (name test_parser)
+ (modules test_parser)
+ (libraries frontend alcotest))
