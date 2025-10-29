@@ -1,3 +1,6 @@
+(** Source file management. *)
+
+(** Individual source file. *)
 type file = {
     id : Span.file_id
   ; path : string
@@ -5,7 +8,10 @@ type file = {
   ; lines : int array
 }
 
+(** Source file collection. *)
 type t = file list
+
+(** File content digest. *)
 type digest = string
 
 let compute_lines source =
@@ -16,15 +22,19 @@ let compute_lines source =
   in
   loop 0 [ 0 ]
 
+(** Empty source collection. *)
 let empty = []
 
+(** Add file returning ID and updated collection. *)
 let add_file files path source =
   let id = List.length files in
   let file = { id; path; source; lines = compute_lines source } in
   (id, file :: files)
 
+(** Get file by ID. *)
 let get_file files id = List.find_opt (fun f -> f.id = id) files
 
+(** Convert offset to line and column. *)
 let line_col file offset =
   let rec search lo hi =
     if lo > hi then lo - 1
@@ -37,6 +47,7 @@ let line_col file offset =
   let col = offset - file.lines.(line) in
   (line + 1, col + 1)
 
+(** Get text of specific line. *)
 let line_text file line =
   if line < 1 || line > Array.length file.lines then None
   else
@@ -47,5 +58,8 @@ let line_text file line =
     in
     Some (String.sub file.source start (end_ - start) |> String.trim)
 
+(** Get file path. *)
 let path file = file.path
+
+(** Compute content digest. *)
 let compute_digest text = Digest.(string text |> to_hex)
