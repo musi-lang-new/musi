@@ -278,15 +278,15 @@ let emit_proc t name params body =
    PROGRAM EMISSION
    ======================================== *)
 
-let collect_procs t program =
-  let intrinsics = [ ("writeln", 1); ("write", 1) ] in
-  List.iter
-    (fun (name, param_count) ->
-      let name_sym = Interner.intern t.interner name in
+let collect_extern_procs t =
+  Symbol.iter_all t.binder_syms (fun sym ->
+    match sym.Symbol.kind with
+    | Symbol.Extern { lib_name; _ } when lib_name = "intrinsic" ->
+      let name_str = Interner.to_string t.interner sym.name in
       let proc_def =
         {
-          Instr.name
-        ; param_count
+          Instr.name = name_str
+        ; param_count = 1
         ; local_count = 0
         ; code = []
         ; external_proc = true
@@ -294,8 +294,11 @@ let collect_procs t program =
       in
       let proc_id = List.length t.procs in
       t.procs <- proc_def :: t.procs;
-      Hashtbl.add t.proc_map name_sym proc_id)
-    intrinsics;
+      Hashtbl.add t.proc_map sym.name proc_id
+    | _ -> ())
+
+let collect_procs t program =
+  collect_extern_procs t;
   List.iter
     (fun (stmt : Tree.stmt) ->
       match stmt.kind with
