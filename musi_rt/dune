@@ -1,0 +1,10 @@
+(library
+ (name runtime)
+ (wrapped false)
+ (modules :standard \ test_vm)
+ (libraries shared backend))
+
+(test
+ (name test_vm)
+ (modules test_vm)
+ (libraries runtime alcotest))
