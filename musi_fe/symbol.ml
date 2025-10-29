@@ -59,3 +59,9 @@ let define t sym =
         !(t.diags)
         (Diagnostic.note "previous definition here" existing.span)
   | None -> Hashtbl.add !(t.curr_scope).symbols sym.name sym
+
+let rec iter_scope_symbols f scope =
+  Hashtbl.iter (fun _ sym -> f sym) scope.symbols;
+  match scope.parent with Some parent -> iter_scope_symbols f parent | None -> ()
+
+let iter_all t f = iter_scope_symbols f !(t.curr_scope)
