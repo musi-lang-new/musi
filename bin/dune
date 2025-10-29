@@ -1,4 +1,0 @@
-(executable
- (name main)
- (modules main cli output commands)
- (libraries musi))

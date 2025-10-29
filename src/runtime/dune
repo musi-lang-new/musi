@@ -1,4 +1,0 @@
-(library
- (public_name musi.runtime)
- (name musi_runtime)
- (libraries musi.shared musi.codegen))
