@@ -1,3 +1,4 @@
 (executable
  (name main)
+ (modules main cli commands compiler output stdlib)
  (libraries shared frontend backend runtime))
