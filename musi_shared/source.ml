@@ -56,7 +56,9 @@ let line_text file line =
       if line < Array.length file.lines then file.lines.(line)
       else String.length file.source
     in
-    Some (String.sub file.source start (end_ - start) |> String.trim)
+    if start < 0 || start > String.length file.source then None
+    else if end_ < start || end_ > String.length file.source then None
+    else Some (String.sub file.source start (end_ - start) |> String.trim)
 
 (** Returns the filesystem path of a file. *)
 let path file = file.path
