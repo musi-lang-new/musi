@@ -1,5 +1,4 @@
 open Alcotest
-module Span = Span
 
 let test_make () =
   let span = Span.make 1 10 20 in
