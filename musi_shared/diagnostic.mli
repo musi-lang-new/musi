@@ -1,12 +1,16 @@
 (** Classifies diagnostic messages by importance. *)
 type severity = Error | Warning | Note
 
+(** Represents a suggested code fix with location and replacement text. *)
+type fixit = { span : Span.t; replacement : string }
+
 (** Represents a compiler message with location and optional context notes. *)
 type t = {
     severity : severity
   ; message : string
   ; span : Span.t
   ; notes : (string * Span.t) list
+  ; fixits : fixit list
 }
 
 (** Accumulates diagnostics with error and warning counts. *)
@@ -26,6 +30,9 @@ val note : string -> Span.t -> t
 
 (** Attaches a contextual note to an existing diagnostic. *)
 val with_note : t -> string -> Span.t -> t
+
+(** Attaches a fix-it suggestion to an existing diagnostic. *)
+val with_fixit : t -> fixit -> t
 
 (** Returns a bag containing no diagnostics. *)
 val empty_bag : diagnostic_bag
