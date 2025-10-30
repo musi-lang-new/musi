@@ -40,17 +40,52 @@ let merge bags =
     empty_bag
     bags
 
-let bold s = "\027[1m" ^ s ^ "\027[0m"
-let red s = "\027[31m" ^ s ^ "\027[0m"
-let yellow s = "\027[33m" ^ s ^ "\027[0m"
-let cyan s = "\027[36m" ^ s ^ "\027[0m"
+let bold s =
+  let buf = Buffer.create 16 in
+  Buffer.add_string buf "\027[1m";
+  Buffer.add_string buf s;
+  Buffer.add_string buf "\027[0m";
+  Buffer.contents buf
+
+let red s =
+  let buf = Buffer.create 16 in
+  Buffer.add_string buf "\027[31m";
+  Buffer.add_string buf s;
+  Buffer.add_string buf "\027[0m";
+  Buffer.contents buf
+
+let yellow s =
+  let buf = Buffer.create 16 in
+  Buffer.add_string buf "\027[33m";
+  Buffer.add_string buf s;
+  Buffer.add_string buf "\027[0m";
+  Buffer.contents buf
+
+let cyan s =
+  let buf = Buffer.create 16 in
+  Buffer.add_string buf "\027[36m";
+  Buffer.add_string buf s;
+  Buffer.add_string buf "\027[0m";
+  Buffer.contents buf
 
 let emit ppf diag files =
   let severity_str, severity_colored =
     match diag.severity with
-    | Error -> ("error", bold (red "error") ^ bold ":")
-    | Warning -> ("warning", bold (yellow "warning") ^ bold ":")
-    | Note -> ("note", bold (cyan "note") ^ bold ":")
+    | Error ->
+      let buf = Buffer.create 16 in
+      Buffer.add_string buf (bold (red "error"));
+      Buffer.add_string buf (bold ":");
+      ("error", Buffer.contents buf)
+    | Warning ->
+      let buf = Buffer.create 16 in
+      Buffer.add_string buf (bold (yellow "warning"));
+      Buffer.add_string buf (bold ":");
+      ("warning", Buffer.contents buf)
+    | Note ->
+      let buf = Buffer.create 16 in
+      Buffer.add_string buf (bold (cyan "note"));
+      Buffer.add_string buf (bold ":");
+      ("note", Buffer.contents buf)
   in
   match Source.get_file files (Span.file diag.span) with
   | None -> Format.fprintf ppf "%s %s@." severity_str diag.message
@@ -81,8 +116,14 @@ let emit ppf diag files =
         (bold (red (String.make len '^'))));
     List.iter
       (fun (msg, span) ->
+        let note_prefix =
+          let buf = Buffer.create 16 in
+          Buffer.add_string buf (bold (cyan "note"));
+          Buffer.add_string buf (bold ":");
+          Buffer.contents buf
+        in
         match Source.get_file files (Span.file span) with
-        | None -> Format.fprintf ppf "%s %s@." (bold (cyan "note") ^ bold ":") msg
+        | None -> Format.fprintf ppf "%s %s@." note_prefix msg
         | Some f ->
           let l, c = Source.line_col f (Span.start span) in
           Format.fprintf
@@ -91,7 +132,7 @@ let emit ppf diag files =
             (Source.path f)
             l
             c
-            (bold (cyan "note") ^ bold ":")
+            note_prefix
             msg)
       (List.rev diag.notes)
 
