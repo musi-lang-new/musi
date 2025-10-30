@@ -1,7 +1,7 @@
 (library
  (name frontend)
  (wrapped false)
- (modules :standard \ test_lexer test_parser)
+ (modules :standard \ test_lexer test_parser test_resolver test_checker)
  (libraries shared))
 
 (test
@@ -12,4 +12,14 @@
 (test
  (name test_parser)
  (modules test_parser)
+ (libraries frontend alcotest))
+
+(test
+ (name test_resolver)
+ (modules test_resolver)
+ (libraries frontend alcotest))
+
+(test
+ (name test_checker)
+ (modules test_checker)
  (libraries frontend alcotest))
