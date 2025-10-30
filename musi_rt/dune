@@ -1,7 +1,7 @@
 (library
  (name runtime)
  (wrapped false)
- (modules :standard \ test_vm)
+ (modules value gc memory builtins vm)
  (libraries shared backend))
 
 (test
