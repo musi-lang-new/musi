@@ -90,12 +90,12 @@ let test_continue () =
   check bool "continue parses" false (Diagnostic.has_errors diags)
 
 let test_if () =
-  let tokens, interner = make_parser "if true then { 1 }" in
+  let tokens, interner = make_parser "if true { 1 }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "if parses" false (Diagnostic.has_errors diags)
 
 let test_if_else () =
-  let tokens, interner = make_parser "if true then { 1 } else { 0 }" in
+  let tokens, interner = make_parser "if true { 1 } else { 0 }" in
   let _ast, diags = Parser.parse_program tokens interner in
   check bool "if-else parses" false (Diagnostic.has_errors diags)
 
