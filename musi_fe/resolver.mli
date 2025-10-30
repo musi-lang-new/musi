@@ -16,7 +16,7 @@ and symbol_kind =
 (** Maintains nested scopes and tracks all declared symbols. *)
 type t
 
-(** Initializes a resolver with an empty root scope. *)
+(** Creates a resolver with an empty root scope. *)
 val create : Interner.t -> t
 
 (** Walks the AST to bind names to declarations, reporting undefined names. *)
