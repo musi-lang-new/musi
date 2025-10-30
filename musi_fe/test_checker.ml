@@ -54,7 +54,7 @@ let test_if_expr () =
   check bool "if expr type checks" false (Diagnostic.has_errors diags)
 
 let test_if_unit () =
-  let diags = make_checker "if true { 1 }" in
+  let diags = make_checker "if true { () }" in
   check bool "if without else type checks" false (Diagnostic.has_errors diags)
 
 let test_block_expr () =
