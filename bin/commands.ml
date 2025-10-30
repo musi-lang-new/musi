@@ -1,5 +1,29 @@
 (** CLI command implementations. *)
 
+let format_error_summary diags =
+  let error_count = diags.Diagnostic.errors in
+  let warning_count = diags.Diagnostic.warnings in
+  let error_msg =
+    if error_count = 1 then "aborting due to previous error"
+    else Printf.sprintf "aborting due to %d previous errors" error_count
+  in
+  if warning_count > 0 then
+    Printf.sprintf
+      "%s; %d warning%s emitted"
+      error_msg
+      warning_count
+      (if warning_count = 1 then "" else "s")
+  else error_msg
+
+let format_success_summary diags =
+  let warning_count = diags.Diagnostic.warnings in
+  if warning_count = 0 then "0 errors, 0 warnings"
+  else
+    Printf.sprintf
+      "0 errors, %d warning%s"
+      warning_count
+      (if warning_count = 1 then "" else "s")
+
 let compile input output_opt =
   let output =
     match output_opt with
@@ -9,20 +33,14 @@ let compile input output_opt =
   Output.compiling input;
   match Pipeline.compile_file input output with
   | Pipeline.Success _ ->
-    Output.finished (Printf.sprintf "dev [unoptimized] target -> %s" output);
+    Output.finished "dev [fast-compile]" output;
     0
   | Pipeline.Failure diags ->
     let ic = open_in input in
     let source = really_input_string ic (in_channel_length ic) in
     close_in ic;
     Pipeline.print_diagnostics diags source;
-    let error_count = diags.errors in
-    let msg =
-      if error_count = 1 then "could not compile due to previous error"
-      else
-        Printf.sprintf "could not compile due to %d previous errors" error_count
-    in
-    Output.error msg;
+    Output.error (format_error_summary diags);
     1
 
 let check input =
@@ -47,16 +65,10 @@ let check input =
 
   if Diagnostic.has_errors all_diags then (
     Pipeline.print_diagnostics all_diags source;
-    let error_count = all_diags.errors in
-    let msg =
-      if error_count = 1 then "could not check due to previous error"
-      else
-        Printf.sprintf "could not check due to %d previous errors" error_count
-    in
-    Output.error msg;
+    Output.error (format_error_summary all_diags);
     1)
   else (
-    Output.finished "type-checking completed";
+    Output.finished "dev [fast-compile]" (format_success_summary all_diags);
     0)
 
 let run input =
@@ -70,12 +82,7 @@ let run input =
     Vm.run vm
   | Pipeline.Failure diags ->
     Pipeline.print_diagnostics diags source;
-    let error_count = diags.errors in
-    let msg =
-      if error_count = 1 then "could not run due to previous error"
-      else Printf.sprintf "could not run due to %d previous errors" error_count
-    in
-    Output.error msg;
+    Output.error (format_error_summary diags);
     1
 
 let help () =
