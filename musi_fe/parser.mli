@@ -3,4 +3,4 @@ type t
 
 (** Builds an AST from tokens, reporting syntax errors. *)
 val parse_program :
-  Token.token list -> Interner.t -> Tree.program * Diagnostic.diagnostic_bag
+  Token.token list -> Interner.t -> Node.program * Diagnostic.diagnostic_bag
