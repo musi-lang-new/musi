@@ -1,14 +1,26 @@
 type symbol = int
-type t = { mutable strings : string array; table : (string, symbol) Hashtbl.t }
 
-let create () = { strings = [||]; table = Hashtbl.create 256 }
+type t = {
+    mutable strings : string array
+  ; mutable count : int
+  ; table : (string, symbol) Hashtbl.t
+}
+
+let create () =
+  { strings = Array.make 16 ""; count = 0; table = Hashtbl.create 256 }
 
 let intern t str =
   match Hashtbl.find_opt t.table str with
   | Some sym -> sym
   | None ->
-    let sym = Array.length t.strings in
-    t.strings <- Array.append t.strings [| str |];
+    let sym = t.count in
+    if sym >= Array.length t.strings then (
+      let new_cap = Array.length t.strings * 2 in
+      let new_arr = Array.make new_cap "" in
+      Array.blit t.strings 0 new_arr 0 (Array.length t.strings);
+      t.strings <- new_arr);
+    t.strings.(sym) <- str;
+    t.count <- t.count + 1;
     Hashtbl.add t.table str sym;
     sym
 
