@@ -1,3 +1,5 @@
+(** CLI command implementations. *)
+
 let compile input output_opt =
   let output =
     match output_opt with
@@ -5,15 +7,15 @@ let compile input output_opt =
     | None -> Filename.remove_extension input ^ ".msc"
   in
   Output.compiling input;
-  match Compiler.compile_file input output with
-  | Compiler.Success _ ->
+  match Pipeline.compile_file input output with
+  | Pipeline.Success _ ->
     Output.finished (Printf.sprintf "dev [unoptimized] target -> %s" output);
     0
-  | Compiler.Failure diags ->
+  | Pipeline.Failure diags ->
     let ic = open_in input in
     let source = really_input_string ic (in_channel_length ic) in
     close_in ic;
-    Compiler.print_diagnostics diags source;
+    Pipeline.print_diagnostics diags source;
     let error_count = diags.errors in
     let msg =
       if error_count = 1 then "could not compile due to previous error"
@@ -25,24 +27,26 @@ let compile input output_opt =
 
 let check input =
   Output.checking input;
-  let interner = Interner.create () in
-  let file_id = 0 in
   let ic = open_in input in
   let source = really_input_string ic (in_channel_length ic) in
   close_in ic;
+
+  let interner = Interner.create () in
+  let file_id = 0 in
   let lexer = Lexer.make file_id source interner in
   let tokens, lex_diags = Lexer.lex lexer in
   let ast, parse_diags = Parser.parse_program tokens interner in
-  let binder = Binder.create interner in
-  let bind_diags = Binder.bind_program binder ast in
-  let checker = Checker.create interner binder.syms in
-  let check_diags = Checker.check_program checker ast in
+  let resolver = Resolver.create interner in
+  let resolve_diags = Resolver.resolve resolver ast in
+  let checker = Checker.create interner resolver in
+  let check_diags = Checker.check checker ast in
+
   let all_diags =
-    Diagnostic.merge
-      [ lex_diags; parse_diags; bind_diags; check_diags ]
+    Diagnostic.merge [ lex_diags; parse_diags; resolve_diags; check_diags ]
   in
+
   if Diagnostic.has_errors all_diags then (
-    Compiler.print_diagnostics all_diags source;
+    Pipeline.print_diagnostics all_diags source;
     let error_count = all_diags.errors in
     let msg =
       if error_count = 1 then "could not check due to previous error"
@@ -60,12 +64,12 @@ let run input =
   let ic = open_in input in
   let source = really_input_string ic (in_channel_length ic) in
   close_in ic;
-  match Compiler.compile_string source with
-  | Compiler.Success program ->
+  match Pipeline.compile_source source with
+  | Pipeline.Success program ->
     let vm = Vm.create program in
     Vm.run vm
-  | Compiler.Failure diags ->
-    Compiler.print_diagnostics diags source;
+  | Pipeline.Failure diags ->
+    Pipeline.print_diagnostics diags source;
     let error_count = diags.errors in
     let msg =
       if error_count = 1 then "could not run due to previous error"
