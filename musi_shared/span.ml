@@ -1,25 +1,25 @@
-(** Source location spans. *)
+(** Represents byte ranges in source files for error reporting. *)
 
-(** File identifier. *)
+(** Identifies which source file a span refers to. *)
 type file_id = int
 
-(** Source location span. *)
+(** Marks a contiguous byte range in a source file. *)
 type t = { file : file_id; start : int; end_ : int }
 
-(** Create span from file ID, start and end positions. *)
+(** Constructs a span from file ID and byte offsets. *)
 let make file start end_ = { file; start; end_ }
 
-(** Dummy span for testing. *)
+(** Provides a placeholder span for synthetic nodes. *)
 let dummy = { file = 0; start = 0; end_ = 0 }
 
-(** Get file ID. *)
+(** Extracts the file ID from a span. *)
 let file t = t.file
 
-(** Get start position. *)
+(** Extracts the starting byte offset. *)
 let start t = t.start
 
-(** Get end position. *)
+(** Extracts the ending byte offset. *)
 let end_ t = t.end_
 
-(** Get span length. *)
+(** Computes the number of bytes covered by a span. *)
 let len t = t.end_ - t.start
