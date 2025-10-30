@@ -124,18 +124,18 @@ opam exec -- dune build      # build all packages
 ### Testing
 
 ```bash
-opam exec -- dune test     # run all tests
-opam exec -- dune exec packages/syntax/test_lexer.exe   # run specific test
+opam exec -- dune test                               # run all tests
+opam exec -- dune exec lib/frontend/test_lexer.exe   # run specific test
 ```
 
 ### Project Structure
 
-- `packages/shared/` — Core utilities: Span, Source, Diagnostic, Interner, helpers.
-- `packages/syntax/` — Lexer, Pratt parser, tokens and AST.
-- `packages/sema/` — Binder, symbol tables, name resolution, type checker.
-- `packages/codegen/` — Instr definitions and emitter (WIP).
-- `packages/runtime/` — VM and standard library runtime (WIP).
-- `packages/bin/` — Compiler CLI / entry point.
+- `lib/shared/` -- Core utilities: Span, Source, Diagnostic, Interner, helpers.
+- `lib/frontend/` -- Lexer, Pratt parser, tokens, AST, symbol tables, name resolution, type checker.
+- `lib/backend/` -- Instr definitions and emitter.
+- `lib/runtime/` -- VM and standard library runtime.
+- `bin/` -- Compiler CLI / entry point.
+- `test/` -- Integration tests.
 
 ## Questions?
 
