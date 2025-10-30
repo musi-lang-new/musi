@@ -20,13 +20,7 @@ let hex_base = 16
 let unicode_fixed_len = 4
 
 let make file source interner =
-  {
-    file
-  ; source
-  ; pos = 0
-  ; interner
-  ; diags = ref Diagnostic.empty_bag
-  }
+  { file; source; pos = 0; interner; diags = ref Diagnostic.empty_bag }
 
 let at_end t = t.pos >= String.length t.source
 let curr_char t = if at_end t then '\000' else t.source.[t.pos]
@@ -67,15 +61,11 @@ let matches t str =
 
 let error t msg start =
   t.diags :=
-    Diagnostic.add
-      !(t.diags)
-      (Diagnostic.error msg (make_span t start))
+    Diagnostic.add !(t.diags) (Diagnostic.error msg (make_span t start))
 
 let warning t msg start =
   t.diags :=
-    Diagnostic.add
-      !(t.diags)
-      (Diagnostic.warning msg (make_span t start))
+    Diagnostic.add !(t.diags) (Diagnostic.warning msg (make_span t start))
 
 let is_valid_utf8_start c =
   let code = Char.code c in
@@ -243,7 +233,7 @@ let scan_unicode_escape_braced t =
       t.pos;
     '\x00')
   else if t.pos = start then (
-    error t "empty unicode escape: '\\u{}'" t.pos;
+    error t "empty unicode escape '\\u{}'" t.pos;
     advance t;
     '\x00')
   else
@@ -344,7 +334,7 @@ let process_escape_char t =
     | 'u' -> scan_unicode_escape t
     | 'U' -> scan_unicode_escape_fixed t 8
     | c ->
-      error t (Printf.sprintf "unknown escape: '\\%c'" c) (t.pos - 1);
+      error t (Printf.sprintf "unknown escape '\\%c'" c) (t.pos - 1);
       c
 
 (* ========================================
@@ -359,7 +349,7 @@ let scan_suffix t =
     match suffix_of_string suffix_text with
     | Some s -> Some s
     | None ->
-      error t (Printf.sprintf "unknown suffix: '%s'" suffix_text) start;
+      error t (Printf.sprintf "unknown suffix '%s'" suffix_text) start;
       None)
   else if t.pos > 0 && t.source.[t.pos - 1] = '_' then (
     error t "suffix cannot be empty" (t.pos - 1);
@@ -541,8 +531,7 @@ let scan_template_lit t start =
       advance t;
       let content = Buffer.contents buf in
       Token.make
-        (Token.NoSubstTemplateLit
-           (Interner.intern t.interner content))
+        (Token.NoSubstTemplateLit (Interner.intern t.interner content))
         (make_span t start))
     else (
       error t "missing closing '`' for template literal" start;
@@ -562,9 +551,7 @@ let scan_line_comment t start =
   advance_n t skip_len;
   consume_while t (fun ch -> ch <> '\n');
   let text = slice t (start + skip_len) in
-  let kind =
-    Token.LineComment { content = Interner.intern t.interner text }
-  in
+  let kind = Token.LineComment { content = Interner.intern t.interner text } in
   Token.make kind (make_span t start)
 
 let scan_block_comment t start =
@@ -590,8 +577,7 @@ let scan_block_comment t start =
     else ""
   in
   Token.make
-    (Token.BlockComment
-       { content = Interner.intern t.interner text; docstyle })
+    (Token.BlockComment { content = Interner.intern t.interner text; docstyle })
     (make_span t start)
 
 (* ========================================
@@ -616,7 +602,7 @@ let scan_symbol t start =
     advance_n t (String.length sym);
     Token.make kind (make_span t start)
   | None ->
-    error t (Printf.sprintf "invalid character: '%c'" (curr_char t)) start;
+    error t (Printf.sprintf "illegal character '%c'" (curr_char t)) start;
     advance t;
     Token.make Token.Error (make_span t start)
 
