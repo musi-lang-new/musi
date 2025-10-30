@@ -1,23 +1,23 @@
-(** Name resolution and symbol table construction. *)
+(** Links identifiers to their declarations and detects undefined names. *)
 
-(** Symbol table entry. *)
+(** Records where a name was declared and what it represents. *)
 type symbol = {
     name : Interner.symbol
   ; kind : symbol_kind
   ; span : Span.t
-  ; mutable ty : int option  (** Filled by type checker *)
+  ; mutable ty : int option  (** Type checker fills this later *)
 }
 
-(** Symbol kinds. *)
+(** Distinguishes variables from procedures. *)
 and symbol_kind =
   | SymVar of { mutable_ : bool; weak : bool }
   | SymProc of { params : int; extern_ : Tree.abi option }
 
-(** Symbol table with scoped resolution. *)
+(** Maintains nested scopes and tracks all declared symbols. *)
 type t
 
-(** Create new resolver. *)
+(** Initializes a resolver with an empty root scope. *)
 val create : Interner.t -> t
 
-(** Resolve names in program, returning symbol table and diagnostics. *)
+(** Walks the AST to bind names to declarations, reporting undefined names. *)
 val resolve : t -> Tree.program -> Diagnostic.diagnostic_bag
