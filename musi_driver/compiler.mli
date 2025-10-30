@@ -1,11 +1,11 @@
-(** Compilation result *)
+(** Outcome of compilation with either bytecode or errors. *)
 type result = Success of Instr.program | Failure of Diagnostic.diagnostic_bag
 
-(** Compile source file to bytecode file *)
+(** Reads a source file, compiles it, and writes bytecode. *)
 val compile_file : string -> string -> result
 
-(** Compile source string to bytecode program *)
+(** Compiles source text through all pipeline stages. *)
 val compile_string : string -> result
 
-(** Print diagnostics to stderr with source context *)
+(** Formats and writes diagnostics with source context to stderr. *)
 val print_diagnostics : Diagnostic.diagnostic_bag -> string -> unit
