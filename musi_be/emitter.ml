@@ -10,10 +10,11 @@
 
 type t = {
     interner : Interner.t
-  ; resolver : Resolver.t
+  ; resolver : Resolver.t [@warning "-69"] (* TODO: use this *)
   ; metadata : Metadata.t
   ; mutable constants : Instr.constant list
   ; mutable locals : (Interner.symbol, int) Hashtbl.t
+       [@warning "-69"] (* TODO: use this *)
   ; mutable next_local : int
   ; mutable code : Instr.instr list
 }
