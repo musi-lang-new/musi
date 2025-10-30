@@ -13,11 +13,13 @@ type ty =
   | TyProc of { params : ty list; ret : ty }
   | TyArray of ty
   | TyTuple of ty list
-  | TyPtr of ty
-  | TyRef of ty
   | TyAny
   | TyNever
   | TyVar of ty_var ref
+  | TyPtr of ty [@warning "-37"]
+  (* TODO: use this *)
+  | TyRef of ty [@warning "-37"]
+(* TODO: use this *)
 
 and ty_var = Unbound of int * int  (** id, level *) | Link of ty
 
@@ -27,10 +29,10 @@ and ty_var = Unbound of int * int  (** id, level *) | Link of ty
 
 type t = {
     interner : Interner.t
-  ; resolver : Resolver.t
+  ; resolver : Resolver.t [@warning "-69"] (* TODO: use this *)
   ; diags : Diagnostic.diagnostic_bag ref
   ; mutable next_var_id : int
-  ; mutable curr_level : int
+  ; mutable curr_level : int [@warning "-69"] (* TODO: use this *)
 }
 
 let create interner resolver =
@@ -90,8 +92,7 @@ let rec unify t ty1 ty2 span =
     else (
       List.iter2 (fun a b -> unify t a b span) p1 p2;
       unify t r1 r2 span)
-  | TyArray t1, TyArray t2 | TyPtr t1, TyPtr t2 | TyRef t1, TyRef t2 ->
-    unify t t1 t2 span
+  | TyArray t1, TyArray t2 -> unify t t1 t2 span
   | TyTuple ts1, TyTuple ts2 ->
     if List.length ts1 <> List.length ts2 then
       error t "tuple arity mismatch" span
@@ -99,27 +100,6 @@ let rec unify t ty1 ty2 span =
   | TyAny, _ | _, TyAny -> ()
   | TyNever, _ | _, TyNever -> ()
   | _ -> error t "type mismatch" span
-
-let rec ty_to_string = function
-  | TyInt -> "Int"
-  | TyNat -> "Nat"
-  | TyBool -> "Bool"
-  | TyText -> "Text"
-  | TyUnit -> "Unit"
-  | TyProc { params; ret } ->
-    Printf.sprintf
-      "proc(%s) -> %s"
-      (String.concat ", " (List.map ty_to_string params))
-      (ty_to_string ret)
-  | TyArray ty -> Printf.sprintf "[%s]" (ty_to_string ty)
-  | TyTuple tys ->
-    Printf.sprintf "(%s)" (String.concat ", " (List.map ty_to_string tys))
-  | TyPtr ty -> Printf.sprintf "*%s" (ty_to_string ty)
-  | TyRef ty -> Printf.sprintf "&%s" (ty_to_string ty)
-  | TyAny -> "Any"
-  | TyNever -> "Never"
-  | TyVar { contents = Link ty } -> ty_to_string ty
-  | TyVar { contents = Unbound (id, _) } -> Printf.sprintf "'t%d" id
 
 (* ========================================
    TYPE CHECKING
