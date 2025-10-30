@@ -168,19 +168,19 @@ and parse_primary_expr t =
     | Token.KwTrue -> Node.ExprBoolLit { value = true }
     | Token.KwFalse -> Node.ExprBoolLit { value = false }
     | Token.Ident sym -> Node.ExprIdent { name = sym }
-    | Token.LParen -> parse_paren_or_tuple t
-    | Token.LBracket -> parse_array t
-    | Token.LBrace -> parse_block t
-    | Token.KwConst -> parse_bind t false
-    | Token.KwVar -> parse_bind t true
-    | Token.KwReturn -> parse_return t
-    | Token.KwBreak -> parse_break t
+    | Token.LParen -> parse_expr_paren_or_tuple t
+    | Token.LBracket -> parse_expr_array t
+    | Token.LBrace -> parse_expr_block t
+    | Token.KwConst -> parse_expr_binding t false
+    | Token.KwVar -> parse_expr_binding t true
+    | Token.KwReturn -> parse_expr_return t
+    | Token.KwBreak -> parse_expr_break t
     | Token.KwContinue -> Node.ExprContinue
-    | Token.KwWhile -> parse_while t
-    | Token.KwFor -> parse_for t
-    | Token.KwIf -> parse_if t
-    | Token.KwMatch -> parse_match t
-    | Token.KwProc -> parse_proc t
+    | Token.KwWhile -> parse_expr_while t
+    | Token.KwFor -> parse_expr_for t
+    | Token.KwIf -> parse_expr_if t
+    | Token.KwMatch -> parse_expr_match t
+    | Token.KwProc -> parse_expr_proc t
     | _ ->
       error t "expected expression" tok.span;
       Node.Error
@@ -248,7 +248,7 @@ and parse_infix_expr t lhs min_prec =
     parse_infix_expr t (make_node kind span []) min_prec
   | _ -> lhs
 
-and parse_paren_or_tuple t =
+and parse_expr_paren_or_tuple t =
   if (curr t).kind = Token.RParen then (
     advance t;
     Node.ExprUnitLit)
@@ -258,16 +258,16 @@ and parse_paren_or_tuple t =
       (List.hd items.items).kind
     else Node.ExprTuple { items }
 
-and parse_array t =
+and parse_expr_array t =
   let items = parse_delimited parse_expr Token.Comma Token.RBracket t in
   Node.ExprArray { items }
 
-and parse_block t =
+and parse_expr_block t =
   let body = parse_separated parse_expr Token.Semi Token.RBrace t in
   let _ = expect t Token.RBrace in
   Node.ExprBlock { body; unsafe_ = false; asyncness = false }
 
-and parse_bind t is_mutable =
+and parse_expr_binding t is_mutable =
   let pat = parse_pat t in
   let ty =
     if (curr t).kind = Token.Colon then (
@@ -277,29 +277,29 @@ and parse_bind t is_mutable =
   in
   let _ = expect t Token.ColonEq in
   let init = parse_expr t in
-  Node.ExprBind { mutable_ = is_mutable; weakness = false; pat; ty; init }
+  Node.ExprBinding { mutable_ = is_mutable; weakness = false; pat; ty; init }
 
-and parse_return t =
+and parse_expr_return t =
   let value =
     if (curr t).kind = Token.Semi || (curr t).kind = Token.RBrace then None
     else Some (parse_expr t)
   in
   Node.ExprReturn { value }
 
-and parse_break t =
+and parse_expr_break t =
   let value =
     if (curr t).kind = Token.Semi || (curr t).kind = Token.RBrace then None
     else Some (parse_expr t)
   in
   Node.ExprBreak { value }
 
-and parse_while t =
+and parse_expr_while t =
   let cond = parse_expr t in
   let _ = expect t Token.LBrace in
   let body = parse_expr t in
   Node.ExprWhile { cond; body }
 
-and parse_for t =
+and parse_expr_for t =
   let pat = parse_pat t in
   let _ = expect t Token.KwIn in
   let iterable = parse_expr t in
@@ -307,9 +307,8 @@ and parse_for t =
   let body = parse_expr t in
   Node.ExprFor { pat; iterable; body }
 
-and parse_if t =
+and parse_expr_if t =
   let cond = parse_expr t in
-  let _ = expect t Token.KwThen in
   let _ = expect t Token.LBrace in
   let then_br = parse_expr t in
   let _ = expect t Token.RBrace in
@@ -324,7 +323,7 @@ and parse_if t =
   in
   Node.ExprIf { cond; then_br; else_br }
 
-and parse_match t =
+and parse_expr_match t =
   let scrutinee = parse_expr t in
   let _ = expect t Token.LBrace in
   let rec loop items seps =
@@ -364,7 +363,7 @@ and parse_match_case t : Node.match_case =
   ; trailing = []
   }
 
-and parse_proc t =
+and parse_expr_proc t =
   let open_span = (curr t).span in
   let _ = expect t Token.LParen in
   let rec loop items seps =
