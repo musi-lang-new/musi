@@ -1,7 +1,7 @@
-(** Diagnostic severity levels *)
+(** Classifies diagnostic messages by importance *)
 type severity = Error | Warning | Note
 
-(** Individual diagnostic *)
+(** Represents a compiler message with location and optional context notes *)
 type t = {
     severity : severity
   ; message : string
@@ -9,44 +9,44 @@ type t = {
   ; notes : (string * Span.t) list
 }
 
-(** Collection of diagnostics *)
+(** Accumulates diagnostics with error and warning counts *)
 type diagnostic_bag = { diags : t list; errors : int; warnings : int }
 
-(** Create diagnostic *)
+(** Constructs a diagnostic from severity, message, and location *)
 val make : severity -> string -> Span.t -> t
 
-(** Create error diagnostic *)
+(** Constructs an error-level diagnostic *)
 val error : string -> Span.t -> t
 
-(** Create warning diagnostic *)
+(** Constructs a warning-level diagnostic *)
 val warning : string -> Span.t -> t
 
-(** Create note diagnostic *)
+(** Constructs a note-level diagnostic *)
 val note : string -> Span.t -> t
 
-(** Add note to diagnostic *)
+(** Attaches a contextual note to an existing diagnostic *)
 val with_note : t -> string -> Span.t -> t
 
-(** Empty diagnostic bag *)
+(** Returns a bag containing no diagnostics *)
 val empty_bag : diagnostic_bag
 
-(** Check if bag is empty *)
+(** Tests whether a bag contains any diagnostics *)
 val is_empty : diagnostic_bag -> bool
 
-(** Check if bag has errors *)
+(** Tests whether a bag contains any errors *)
 val has_errors : diagnostic_bag -> bool
 
-(** Add diagnostic to bag *)
+(** Inserts a diagnostic into a bag, updating counts *)
 val add : diagnostic_bag -> t -> diagnostic_bag
 
-(** Convert bag to list *)
+(** Extracts diagnostics from a bag in emission order *)
 val to_list : diagnostic_bag -> t list
 
-(** Merge multiple bags *)
+(** Combines multiple bags into one, preserving all diagnostics *)
 val merge : diagnostic_bag list -> diagnostic_bag
 
-(** Emit single diagnostic *)
+(** Formats and writes a diagnostic with source context *)
 val emit : Format.formatter -> t -> Source.t -> unit
 
-(** Emit all diagnostics in bag *)
+(** Formats and writes all diagnostics in a bag *)
 val emit_all : Format.formatter -> diagnostic_bag -> Source.t -> unit
