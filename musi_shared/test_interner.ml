@@ -1,7 +1,5 @@
 open Alcotest
 
-module Interner = Interner
-
 let test_create () =
   let interner = Interner.create () in
   let sym1 = Interner.intern interner "test" in
