@@ -76,7 +76,7 @@ let rec resolve_node t (node : Node.node) =
       error
         t
         (Printf.sprintf
-           "undefined name: '%s'"
+           "undefined name '%s'"
            (Interner.resolve t.interner name))
         node.span)
   | Node.ExprCall { callee; args } ->
