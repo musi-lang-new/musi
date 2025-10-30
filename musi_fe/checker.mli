@@ -7,4 +7,4 @@ type t
 val create : Interner.t -> Resolver.t -> t
 
 (** Walks the AST to infer types and report mismatches. *)
-val check : t -> Tree.program -> Diagnostic.diagnostic_bag
+val check : t -> Node.program -> Diagnostic.diagnostic_bag
