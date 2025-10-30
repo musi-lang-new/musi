@@ -1,23 +1,23 @@
-(** Function that constructs runtime error exceptions *)
+(** Builds runtime error exceptions from messages. *)
 type runtime_error_fn = string -> exn
 
-(** Native OCaml function implementing an intrinsic *)
+(** Native function callable from bytecode. *)
 type intrinsic_fn = Value.value list -> Value.value
 
-(** Callback for registering intrinsics by name *)
+(** Adds an intrinsic to a registry. *)
 type register_fn = string -> intrinsic_fn -> unit
 
-(** Registry mapping intrinsic names to implementations *)
+(** Maps intrinsic names to their native implementations. *)
 type t = (string, intrinsic_fn) Hashtbl.t
 
-(** Create empty intrinsic registry *)
+(** Allocates an empty registry. *)
 val create : unit -> t
 
-(** Register intrinsic function by name *)
+(** Adds a native function to the registry. *)
 val register : t -> string -> intrinsic_fn -> unit
 
-(** Look up intrinsic by name *)
+(** Finds a native function by name. *)
 val lookup : t -> string -> intrinsic_fn option
 
-(** Create registry with all stdlib intrinsics registered *)
+(** Builds a registry preloaded with standard library intrinsics. *)
 val init_stdlib : runtime_error_fn -> t
