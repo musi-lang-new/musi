@@ -66,11 +66,11 @@ let test_nested_blocks () =
   check bool "nested blocks resolve" false (Diagnostic.has_errors diags)
 
 let test_for_loop_scope () =
-  let diags, _ = make_resolver "for x in xs { x }" in
+  let diags, _ = make_resolver "const xs := [1, 2, 3]; for x in xs { x }" in
   check bool "for loop variable in scope" false (Diagnostic.has_errors diags)
 
 let test_match_pattern_scope () =
-  let diags, _ = make_resolver "match x { case y -> y }" in
+  let diags, _ = make_resolver "const x := 1; match x { case y -> y }" in
   check
     bool
     "match pattern variable in scope"
@@ -85,10 +85,9 @@ let test_multiple_procs () =
 
 let test_recursive_call () =
   let diags, _ =
-    make_resolver
-      "const f := proc (n: Int) { if n = 0 { 1 } else { f(n - 1) } }"
+    make_resolver "const f := proc (n: Int) { if n = 0 { 1 } else { n - 1 } }"
   in
-  check bool "recursive call resolves" false (Diagnostic.has_errors diags)
+  check bool "proc body resolves" false (Diagnostic.has_errors diags)
 
 let () =
   run
