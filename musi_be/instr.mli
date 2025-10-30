@@ -1,3 +1,4 @@
+(** Stack-based VM instructions for the Musi bytecode format. *)
 type instr =
   (* Stack constants *)
   | Nop
@@ -154,8 +155,10 @@ type instr =
   | GcRelease
   | GcAutorelease
 
+(** Compile-time constant values stored in the constant pool. *)
 type constant = CInt32 of int32 | CText of string
 
+(** Procedure metadata and instruction sequence. *)
 type proc_def = {
     name : string
   ; param_count : int
@@ -164,12 +167,12 @@ type proc_def = {
   ; external_proc : bool
 }
 
+(** Record type metadata with field names and types. *)
 type record_type_def = { name : string; fields : (string * string) list }
 
+(** Complete bytecode program with all metadata and code. *)
 type program = {
     constants : constant array
   ; procs : proc_def array
   ; records : record_type_def list
 }
-
-
