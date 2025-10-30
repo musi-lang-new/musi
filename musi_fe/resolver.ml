@@ -61,7 +61,7 @@ let define t sym =
 
 let rec resolve_node t (node : Node.node) =
   match node.kind with
-  | Node.ExprBind { mutable_; weakness; pat; init; _ } ->
+  | Node.ExprBinding { mutable_; weakness; pat; init; _ } ->
     resolve_node t init;
     resolve_pattern t pat mutable_ weakness
   | Node.ExprProc { params; body; _ } ->
