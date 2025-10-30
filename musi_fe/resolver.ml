@@ -27,6 +27,44 @@ let make_scope parent = { symbols = Hashtbl.create 16; parent }
 let create interner =
   { interner; curr_scope = make_scope None; diags = ref Diagnostic.empty_bag }
 
+(* https://www.geeksforgeeks.org/dsa/introduction-to-levenshtein-distance/ *)
+let levenshtein s1 s2 =
+  let m = String.length s1 in
+  let n = String.length s2 in
+  let d = Array.make_matrix (m + 1) (n + 1) 0 in
+  for i = 0 to m do
+    d.(i).(0) <- i
+  done;
+  for j = 0 to n do
+    d.(0).(j) <- j
+  done;
+  for j = 1 to n do
+    for i = 1 to m do
+      let cost = if s1.[i - 1] = s2.[j - 1] then 0 else 1 in
+      d.(i).(j) <-
+        min
+          (d.(i - 1).(j) + 1)
+          (min (d.(i).(j - 1) + 1) (d.(i - 1).(j - 1) + cost))
+    done
+  done;
+  d.(m).(n)
+
+let find_similar_names t name =
+  let name_str = Interner.resolve t.interner name in
+  let candidates = ref [] in
+  let rec collect_from_scope scope =
+    Hashtbl.iter
+      (fun sym_name _ ->
+        let sym_str = Interner.resolve t.interner sym_name in
+        let dist = levenshtein name_str sym_str in
+        if dist <= 2 && dist > 0 then
+          candidates := (sym_str, dist) :: !candidates)
+      scope.symbols;
+    match scope.parent with Some p -> collect_from_scope p | None -> ()
+  in
+  collect_from_scope t.curr_scope;
+  List.sort (fun (_, d1) (_, d2) -> compare d1 d2) !candidates
+
 let error t msg span =
   t.diags := Diagnostic.add !(t.diags) (Diagnostic.error msg span)
 
@@ -73,12 +111,21 @@ let rec resolve_node t (node : Node.node) =
     match lookup t name with
     | Some _sym -> node.sym <- Some 0
     | None ->
-      error
-        t
-        (Printf.sprintf
-           "undefined name '%s'"
-           (Interner.resolve t.interner name))
-        node.span)
+      let name_str = Interner.resolve t.interner name in
+      let diag =
+        Diagnostic.error
+          (Printf.sprintf "undefined name '%s'" name_str)
+          node.span
+      in
+      let diag =
+        match find_similar_names t name with
+        | (suggestion, _) :: _ ->
+          Diagnostic.with_fixit
+            diag
+            { Diagnostic.span = node.span; replacement = suggestion }
+        | [] -> diag
+      in
+      t.diags := Diagnostic.add !(t.diags) diag)
   | Node.ExprCall { callee; args } ->
     resolve_node t callee;
     List.iter (resolve_node t) args.items
