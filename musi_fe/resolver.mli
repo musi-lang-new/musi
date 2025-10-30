@@ -11,7 +11,7 @@ type symbol = {
 (** Distinguishes variables from procedures. *)
 and symbol_kind =
   | SymVar of { mutable_ : bool; weak : bool }
-  | SymProc of { params : int; extern_ : Tree.abi option }
+  | SymProc of { params : int; extern_ : Node.abi option }
 
 (** Maintains nested scopes and tracks all declared symbols. *)
 type t
@@ -20,4 +20,4 @@ type t
 val create : Interner.t -> t
 
 (** Walks the AST to bind names to declarations, reporting undefined names. *)
-val resolve : t -> Tree.program -> Diagnostic.diagnostic_bag
+val resolve : t -> Node.program -> Diagnostic.diagnostic_bag

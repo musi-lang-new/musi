@@ -9,7 +9,7 @@ type symbol = {
 
 and symbol_kind =
   | SymVar of { mutable_ : bool; weak : bool }
-  | SymProc of { params : int; extern_ : Tree.abi option }
+  | SymProc of { params : int; extern_ : Node.abi option }
 
 type scope = {
     symbols : (Interner.symbol, symbol) Hashtbl.t
@@ -59,17 +59,17 @@ let define t sym =
     error t "previous definition here" existing.span
   | None -> Hashtbl.add t.curr_scope.symbols sym.name sym
 
-let rec resolve_node t (node : Tree.node) =
+let rec resolve_node t (node : Node.node) =
   match node.kind with
-  | Tree.ExprBind { mutable_; weakness; pat; init; _ } ->
+  | Node.ExprBind { mutable_; weakness; pat; init; _ } ->
     resolve_node t init;
     resolve_pattern t pat mutable_ weakness
-  | Tree.ExprProc { params; body; _ } ->
+  | Node.ExprProc { params; body; _ } ->
     enter_scope t;
     List.iter (resolve_param t) params.items;
     Option.iter (resolve_node t) body;
     exit_scope t
-  | Tree.ExprIdent { name } -> (
+  | Node.ExprIdent { name } -> (
     match lookup t name with
     | Some _sym -> node.sym <- Some 0
     | None ->
@@ -79,82 +79,82 @@ let rec resolve_node t (node : Tree.node) =
            "undefined name: '%s'"
            (Interner.resolve t.interner name))
         node.span)
-  | Tree.ExprCall { callee; args } ->
+  | Node.ExprCall { callee; args } ->
     resolve_node t callee;
     List.iter (resolve_node t) args.items
-  | Tree.ExprBinary { lhs; rhs; _ } ->
+  | Node.ExprBinary { lhs; rhs; _ } ->
     resolve_node t lhs;
     resolve_node t rhs
-  | Tree.ExprUnary { operand; _ } -> resolve_node t operand
-  | Tree.ExprAssign { lhs; rhs } ->
+  | Node.ExprUnary { operand; _ } -> resolve_node t operand
+  | Node.ExprAssign { lhs; rhs } ->
     resolve_node t lhs;
     resolve_node t rhs
-  | Tree.ExprField { receiver; _ } -> resolve_node t receiver
-  | Tree.ExprIndex { receiver; index } ->
+  | Node.ExprField { receiver; _ } -> resolve_node t receiver
+  | Node.ExprIndex { receiver; index } ->
     resolve_node t receiver;
     resolve_node t index
-  | Tree.ExprIf { cond; then_br; else_br } ->
+  | Node.ExprIf { cond; then_br; else_br } ->
     resolve_node t cond;
     resolve_node t then_br;
     Option.iter (resolve_node t) else_br
-  | Tree.ExprMatch { scrutinee; cases } ->
+  | Node.ExprMatch { scrutinee; cases } ->
     resolve_node t scrutinee;
     List.iter (resolve_match_case t) cases.items
-  | Tree.ExprWhile { cond; body } ->
+  | Node.ExprWhile { cond; body } ->
     resolve_node t cond;
     resolve_node t body
-  | Tree.ExprFor { pat; iterable; body } ->
+  | Node.ExprFor { pat; iterable; body } ->
     resolve_node t iterable;
     enter_scope t;
     resolve_pattern t pat false false;
     resolve_node t body;
     exit_scope t
-  | Tree.ExprBlock { body; _ } ->
+  | Node.ExprBlock { body; _ } ->
     enter_scope t;
     List.iter (resolve_node t) body.items;
     exit_scope t
-  | Tree.ExprReturn { value } -> Option.iter (resolve_node t) value
-  | Tree.ExprBreak { value } -> Option.iter (resolve_node t) value
-  | Tree.ExprArray { items } -> List.iter (resolve_node t) items.items
-  | Tree.ExprArrayList { item; count } ->
+  | Node.ExprReturn { value } -> Option.iter (resolve_node t) value
+  | Node.ExprBreak { value } -> Option.iter (resolve_node t) value
+  | Node.ExprArray { items } -> List.iter (resolve_node t) items.items
+  | Node.ExprArrayList { item; count } ->
     resolve_node t item;
     resolve_node t count
-  | Tree.ExprTuple { items } -> List.iter (resolve_node t) items.items
-  | Tree.ExprRecordLit { fields } ->
+  | Node.ExprTuple { items } -> List.iter (resolve_node t) items.items
+  | Node.ExprRecordLit { fields } ->
     List.iter
-      (fun (f : Tree.record_field) -> resolve_node t f.value)
+      (fun (f : Node.record_field) -> resolve_node t f.value)
       fields.items
-  | Tree.ExprRange { start; end_; _ } ->
+  | Node.ExprRange { start; end_; _ } ->
     resolve_node t start;
     resolve_node t end_
-  | Tree.ExprCast { inner; _ } -> resolve_node t inner
-  | Tree.ExprTest { inner; _ } -> resolve_node t inner
-  | Tree.ExprTry { inner } -> resolve_node t inner
-  | Tree.ExprDefer { inner } -> resolve_node t inner
-  | Tree.ExprIntLit _ | Tree.ExprBinLit _ | Tree.ExprTextLit _
-  | Tree.ExprBoolLit _ | Tree.ExprUnitLit | Tree.ExprContinue
-  | Tree.ExprImport _ | Tree.ExprExport _ | Tree.ExprRecord _
-  | Tree.ExprChoice _ | Tree.ExprInterface _ | Tree.PatWildcard | Tree.PatRest _
-  | Tree.Error ->
+  | Node.ExprCast { inner; _ } -> resolve_node t inner
+  | Node.ExprTest { inner; _ } -> resolve_node t inner
+  | Node.ExprTry { inner } -> resolve_node t inner
+  | Node.ExprDefer { inner } -> resolve_node t inner
+  | Node.ExprIntLit _ | Node.ExprBinLit _ | Node.ExprTextLit _
+  | Node.ExprBoolLit _ | Node.ExprUnitLit | Node.ExprContinue
+  | Node.ExprImport _ | Node.ExprExport _ | Node.ExprRecord _
+  | Node.ExprChoice _ | Node.ExprInterface _ | Node.PatWildcard | Node.PatRest _
+  | Node.Error ->
     ()
-  | Tree.PatBind { inner } -> resolve_node t inner
-  | Tree.PatOr { alts } -> List.iter (resolve_node t) alts.items
-  | Tree.PatExpr { inner } -> resolve_node t inner
+  | Node.PatBind { inner } -> resolve_node t inner
+  | Node.PatOr { alts } -> List.iter (resolve_node t) alts.items
+  | Node.PatExpr { inner } -> resolve_node t inner
 
 and resolve_pattern t pat mutable_ weak =
   match pat.kind with
-  | Tree.ExprIdent { name } ->
+  | Node.ExprIdent { name } ->
     let sym =
       { name; kind = SymVar { mutable_; weak }; span = pat.span; ty = None }
     in
     define t sym
-  | Tree.PatBind { inner } -> resolve_pattern t inner mutable_ weak
-  | Tree.ExprTuple { items } ->
+  | Node.PatBind { inner } -> resolve_pattern t inner mutable_ weak
+  | Node.ExprTuple { items } ->
     List.iter (fun p -> resolve_pattern t p mutable_ weak) items.items
-  | Tree.PatWildcard | Tree.PatRest _ -> ()
+  | Node.PatWildcard | Node.PatRest _ -> ()
   | _ -> resolve_node t pat
 
-and resolve_param t (param : Tree.param) =
+and resolve_param t (param : Node.param) =
   let sym =
     {
       name = param.name
@@ -165,7 +165,7 @@ and resolve_param t (param : Tree.param) =
   in
   define t sym
 
-and resolve_match_case t (case : Tree.match_case) =
+and resolve_match_case t (case : Node.match_case) =
   enter_scope t;
   resolve_pattern t case.pat false false;
   Option.iter (resolve_node t) case.guard;
