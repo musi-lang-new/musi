@@ -77,7 +77,7 @@ type node_kind =
     }
   | ExprChoice of { variants : choice_variant delimited; methods : node list }
   | ExprInterface of { signatures : node delimited; unsafe_ : bool }
-  | ExprBind of {
+  | ExprBinding of {
         mutable_ : bool
       ; weakness : bool
       ; pat : node
