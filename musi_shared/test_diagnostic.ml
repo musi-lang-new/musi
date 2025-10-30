@@ -1,6 +1,4 @@
 open Alcotest
-module Diagnostic = Diagnostic
-module Span = Span
 
 let test_empty_bag () =
   let bag = Diagnostic.empty_bag in
