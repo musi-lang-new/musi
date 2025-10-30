@@ -19,7 +19,6 @@ type precedence =
   | PrecPower
   | PrecUnary
   | PrecCall
-  | PrecPrimary
 
 let prec_to_int = function
   | PrecNone -> 0
@@ -36,7 +35,6 @@ let prec_to_int = function
   | PrecPower -> 11
   | PrecUnary -> 12
   | PrecCall -> 13
-  | PrecPrimary -> 14
 
 (* ========================================
    PARSER STATE
