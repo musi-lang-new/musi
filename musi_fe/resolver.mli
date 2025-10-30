@@ -5,7 +5,7 @@ type symbol = {
     name : Interner.symbol
   ; kind : symbol_kind
   ; span : Span.t
-  ; mutable ty : int option  (** Type checker fills this later *)
+  ; mutable ty : int option
 }
 
 (** Distinguishes variables from procedures. *)
