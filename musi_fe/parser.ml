@@ -18,7 +18,6 @@ type precedence =
   | PrecFactor
   | PrecPower
   | PrecUnary
-  | PrecCall
 
 let prec_to_int = function
   | PrecNone -> 0
@@ -34,7 +33,6 @@ let prec_to_int = function
   | PrecFactor -> 10
   | PrecPower -> 11
   | PrecUnary -> 12
-  | PrecCall -> 13
 
 (* ========================================
    PARSER STATE
@@ -126,7 +124,6 @@ let prefix_prec = function
   | _ -> None
 
 let infix_prec = function
-  | Token.Dot | Token.LBracket | Token.LParen -> Some (PrecCall, PrecCall)
   | Token.Caret -> Some (PrecPower, PrecUnary)
   | Token.Star | Token.Slash | Token.KwMod -> Some (PrecFactor, PrecFactor)
   | Token.Plus | Token.Minus -> Some (PrecTerm, PrecTerm)
@@ -154,6 +151,7 @@ and parse_expr_bp t min_prec =
     | Some prec -> parse_prefix_expr t prec
     | None -> parse_primary_expr t
   in
+  let lhs = parse_postfix_expr t lhs in
   parse_infix_expr t lhs min_prec
 
 and parse_primary_expr t =
@@ -197,6 +195,49 @@ and parse_prefix_expr t prec =
     (span_from_to op_tok.span operand.span)
     leading
 
+and parse_postfix_expr t lhs =
+  match (curr t).kind with
+  | Token.LParen ->
+    advance t;
+    let args = parse_delimited parse_expr Token.Comma Token.RParen t in
+    let node =
+      make_node
+        (Node.ExprCall { callee = lhs; args })
+        (span_to_curr t lhs.span)
+        []
+    in
+    parse_postfix_expr t node
+  | Token.Dot ->
+    advance t;
+    let field =
+      match (curr t).kind with
+      | Token.Ident sym ->
+        advance t;
+        sym
+      | _ ->
+        error t "expected field name" (curr t).span;
+        Interner.intern t.interner "<error>"
+    in
+    let node =
+      make_node
+        (Node.ExprField { receiver = lhs; field })
+        (span_to_curr t lhs.span)
+        []
+    in
+    parse_postfix_expr t node
+  | Token.LBracket ->
+    advance t;
+    let index = parse_expr t in
+    let _ = expect t Token.RBracket in
+    let node =
+      make_node
+        (Node.ExprIndex { receiver = lhs; index })
+        (span_to_curr t lhs.span)
+        []
+    in
+    parse_postfix_expr t node
+  | _ -> lhs
+
 and parse_infix_expr t lhs min_prec =
   match infix_prec (curr t).kind with
   | Some (lbp, rbp) when prec_to_int lbp >= prec_to_int min_prec ->
@@ -204,24 +245,6 @@ and parse_infix_expr t lhs min_prec =
     advance t;
     let kind, span =
       match op with
-      | Token.LParen ->
-        let args = parse_delimited parse_expr Token.Comma Token.RParen t in
-        (Node.ExprCall { callee = lhs; args }, span_to_curr t lhs.span)
-      | Token.Dot ->
-        let field =
-          match (curr t).kind with
-          | Token.Ident sym ->
-            advance t;
-            sym
-          | _ ->
-            error t "expected field name" (curr t).span;
-            Interner.intern t.interner "<error>"
-        in
-        (Node.ExprField { receiver = lhs; field }, span_to_curr t lhs.span)
-      | Token.LBracket ->
-        let index = parse_expr t in
-        let _ = expect t Token.RBracket in
-        (Node.ExprIndex { receiver = lhs; index }, span_to_curr t lhs.span)
       | Token.KwAs ->
         let target = parse_ty t in
         ( Node.ExprCast { inner = lhs; target }
