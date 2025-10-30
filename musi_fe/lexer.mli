@@ -1,8 +1,8 @@
-(** Lexer state *)
+(** Tracks position and context while scanning source text. *)
 type t
 
-(** Create lexer from file ID, source text, and string interner *)
+(** Creates a lexer for a source file. *)
 val make : Span.file_id -> string -> Interner.t -> t
 
-(** Tokenize source returning tokens and diagnostics *)
+(** Scans source text into tokens, reporting any lexical errors. *)
 val lex : t -> Token.token list * Diagnostic.diagnostic_bag
