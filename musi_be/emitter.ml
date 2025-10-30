@@ -105,7 +105,7 @@ let emit_ldci4 t n =
 
 let rec collect_metadata_node t (node : Node.node) =
   match node.kind with
-  | Node.ExprBind { pat; init; _ } -> (
+  | Node.ExprBinding { pat; init; _ } -> (
     collect_metadata_node t init;
     match (pat.kind, init.kind) with
     | Node.ExprIdent { name }, Node.ExprProc { params; external_; _ } ->
@@ -198,7 +198,7 @@ let rec emit_expr t (node : Node.node) =
           emit_expr t node;
           if i < List.length items - 1 then emit_instr t Instr.Pop)
         items)
-  | Node.ExprBind { pat; init; _ } -> (
+  | Node.ExprBinding { pat; init; _ } -> (
     emit_expr t init;
     match pat.kind with
     | Node.ExprIdent { name } ->
@@ -236,7 +236,7 @@ let emit_main_wrapper t program =
     List.filter
       (fun (node : Node.node) ->
         match node.kind with
-        | Node.ExprBind { init; _ } -> (
+        | Node.ExprBinding { init; _ } -> (
           match init.kind with Node.ExprProc _ -> false | _ -> true)
         | _ -> true)
       program
@@ -263,7 +263,7 @@ let emit_program_internal t program =
   List.iter
     (fun (node : Node.node) ->
       match node.kind with
-      | Node.ExprBind { pat; init; _ } -> (
+      | Node.ExprBinding { pat; init; _ } -> (
         match (pat.kind, init.kind) with
         | Node.ExprIdent { name }, Node.ExprProc { params; body; external_; _ }
           ->
