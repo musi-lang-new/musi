@@ -1,8 +1,4 @@
 open Alcotest
-module Token = Token
-module Lexer = Lexer
-module Interner = Interner
-module Diagnostic = Diagnostic
 
 let make_lexer source =
   let interner = Interner.create () in
