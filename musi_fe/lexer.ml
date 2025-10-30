@@ -221,11 +221,6 @@ let check_numeric_overflow t text start =
   with Failure _ ->
     warning t "integer literal too large for any integer type" start
 
-let check_leading_zeros t start =
-  if
-    t.pos > start + 1 && t.source.[start] = '0' && is_digit t.source.[start + 1]
-  then error t "leading zeros not allowed in decimal literals" start
-
 let scan_unicode_escape_braced t =
   advance t;
   let start = t.pos in
@@ -407,6 +402,25 @@ let scan_hex_number t start =
   check_numeric_overflow t text start;
   Token.make (Token.IntLit (text, suffix)) (make_span t start)
 
+let scan_decimal_number t start =
+  consume_while t is_number_char;
+  let has_dot = curr_char t = '.' && is_digit (peek_char t) in
+  if has_dot then (
+    advance t;
+    consume_while t is_number_char);
+  let has_exp = curr_char t = 'e' || curr_char t = 'E' in
+  if has_exp then scan_scientific_notation t;
+  let suffix = scan_suffix t in
+  let text = slice t start in
+  check_consecutive_underscores t text start;
+  check_mixed_separators t text start;
+  if not (has_dot || has_exp) then check_numeric_overflow t text start;
+  let kind =
+    if has_dot || has_exp then Token.FloatLit (text, suffix)
+    else Token.IntLit (text, suffix)
+  in
+  Token.make kind (make_span t start)
+
 let scan_number t start =
   if curr_char t = '0' then (
     match peek_char t with
@@ -414,42 +428,16 @@ let scan_number t start =
     | 'o' | 'O' -> scan_octal_number t start
     | 'x' | 'X' -> scan_hex_number t start
     | _ ->
+      let saved_pos = t.pos in
       consume_while t is_number_char;
-      check_leading_zeros t start;
-      let has_dot = curr_char t = '.' && is_digit (peek_char t) in
-      if has_dot then (
-        advance t;
-        consume_while t is_number_char);
-      let has_exp = curr_char t = 'e' || curr_char t = 'E' in
-      if has_exp then scan_scientific_notation t;
-      let suffix = scan_suffix t in
-      let text = slice t start in
-      check_consecutive_underscores t text start;
-      check_mixed_separators t text start;
-      if not (has_dot || has_exp) then check_numeric_overflow t text start;
-      let kind =
-        if has_dot || has_exp then Token.FloatLit (text, suffix)
-        else Token.IntLit (text, suffix)
-      in
-      Token.make kind (make_span t start))
-  else (
-    consume_while t is_number_char;
-    let has_dot = curr_char t = '.' && is_digit (peek_char t) in
-    if has_dot then (
-      advance t;
-      consume_while t is_number_char);
-    let has_exp = curr_char t = 'e' || curr_char t = 'E' in
-    if has_exp then scan_scientific_notation t;
-    let suffix = scan_suffix t in
-    let text = slice t start in
-    check_consecutive_underscores t text start;
-    check_mixed_separators t text start;
-    if not (has_dot || has_exp) then check_numeric_overflow t text start;
-    let kind =
-      if has_dot || has_exp then Token.FloatLit (text, suffix)
-      else Token.IntLit (text, suffix)
-    in
-    Token.make kind (make_span t start))
+      if
+        t.pos > saved_pos + 1
+        && t.source.[saved_pos] = '0'
+        && is_digit t.source.[saved_pos + 1]
+      then error t "leading zeros not allowed in decimal literals" saved_pos;
+      t.pos <- saved_pos;
+      scan_decimal_number t start)
+  else scan_decimal_number t start
 
 (* ========================================
    STRING LITERAL SCANNING
@@ -499,41 +487,41 @@ let scan_rune_lit t start =
     else advance t;
     Token.make (Token.RuneLit (Char.code c)) (make_span t start)
 
+let scan_template_content t buf start =
+  let content_start = t.pos in
+  while (not (at_end t)) && curr_char t <> '`' && curr_char t <> '$' do
+    if curr_char t = '\\' then (
+      advance t;
+      Buffer.add_char buf (process_escape_char t))
+    else (
+      Buffer.add_char buf (curr_char t);
+      advance t)
+  done;
+  validate_utf8_range t content_start t.pos;
+  if curr_char t = '$' && peek_char t = '{' then
+    let content = Buffer.contents buf in
+    if Buffer.length buf = 0 then
+      Token.make
+        (Token.TemplateHead (Interner.intern t.interner content))
+        (make_span t start)
+    else
+      Token.make
+        (Token.TemplateMiddle (Interner.intern t.interner content))
+        (make_span t start)
+  else if curr_char t = '`' then (
+    advance t;
+    let content = Buffer.contents buf in
+    Token.make
+      (Token.NoSubstTemplateLit (Interner.intern t.interner content))
+      (make_span t start))
+  else (
+    error t "missing closing '`' for template literal" start;
+    Token.make Token.Error (make_span t start))
+
 let scan_template_lit t start =
   advance t;
   let buf = Buffer.create 64 in
-  let scan_content () =
-    let content_start = t.pos in
-    while (not (at_end t)) && curr_char t <> '`' && curr_char t <> '$' do
-      if curr_char t = '\\' then (
-        advance t;
-        Buffer.add_char buf (process_escape_char t))
-      else (
-        Buffer.add_char buf (curr_char t);
-        advance t)
-    done;
-    validate_utf8_range t content_start t.pos;
-    if curr_char t = '$' && peek_char t = '{' then
-      let content = Buffer.contents buf in
-      if Buffer.length buf = 0 then
-        Token.make
-          (Token.TemplateHead (Interner.intern t.interner content))
-          (make_span t start)
-      else
-        Token.make
-          (Token.TemplateMiddle (Interner.intern t.interner content))
-          (make_span t start)
-    else if curr_char t = '`' then (
-      advance t;
-      let content = Buffer.contents buf in
-      Token.make
-        (Token.NoSubstTemplateLit (Interner.intern t.interner content))
-        (make_span t start))
-    else (
-      error t "missing closing '`' for template literal" start;
-      Token.make Token.Error (make_span t start))
-  in
-  scan_content ()
+  scan_template_content t buf start
 
 (* ========================================
    COMMENT SCANNING
