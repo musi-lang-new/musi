@@ -76,7 +76,7 @@ let rec unify t ty1 ty2 span =
   | TyVar ({ contents = Unbound (id, level) } as v), ty
   | ty, TyVar ({ contents = Unbound (id, level) } as v) ->
     if occurs id level ty then
-      error t "occurs check: cannot construct infinite type" span
+      error t "cannot construct infinite type (occurs check)" span
     else v := Link ty
   | TyInt, TyInt
   | TyNat, TyNat
@@ -125,15 +125,15 @@ let rec ty_to_string = function
    TYPE CHECKING
    ======================================== *)
 
-let rec infer t (node : Tree.node) : ty =
+let rec infer t (node : Node.node) : ty =
   match node.kind with
-  | Tree.ExprIntLit _ -> TyInt
-  | Tree.ExprBinLit _ -> TyNat
-  | Tree.ExprTextLit _ -> TyText
-  | Tree.ExprBoolLit _ -> TyBool
-  | Tree.ExprUnitLit -> TyUnit
-  | Tree.ExprIdent _ -> fresh_var t
-  | Tree.ExprBinary { op; lhs; rhs } -> (
+  | Node.ExprIntLit _ -> TyInt
+  | Node.ExprBinLit _ -> TyNat
+  | Node.ExprTextLit _ -> TyText
+  | Node.ExprBoolLit _ -> TyBool
+  | Node.ExprUnitLit -> TyUnit
+  | Node.ExprIdent _ -> fresh_var t
+  | Node.ExprBinary { op; lhs; rhs } -> (
     match op with
     | Token.Plus | Token.Minus | Token.Star | Token.Slash | Token.KwMod ->
       check t lhs TyInt;
@@ -151,7 +151,7 @@ let rec infer t (node : Tree.node) : ty =
     | _ ->
       error t "unknown binary operator" node.span;
       TyNever)
-  | Tree.ExprUnary { op; operand } -> (
+  | Node.ExprUnary { op; operand } -> (
     match op with
     | Token.Minus ->
       check t operand TyInt;
@@ -162,13 +162,13 @@ let rec infer t (node : Tree.node) : ty =
     | _ ->
       error t "unknown unary operator" node.span;
       TyNever)
-  | Tree.ExprCall { callee; args } ->
+  | Node.ExprCall { callee; args } ->
     let callee_ty = infer t callee in
     let ret_ty = fresh_var t in
     let param_tys = List.map (infer t) args.items in
     unify t callee_ty (TyProc { params = param_tys; ret = ret_ty }) node.span;
     ret_ty
-  | Tree.ExprIf { cond; then_br; else_br } -> (
+  | Node.ExprIf { cond; then_br; else_br } -> (
     check t cond TyBool;
     let then_ty = infer t then_br in
     match else_br with
@@ -179,7 +179,7 @@ let rec infer t (node : Tree.node) : ty =
     | None ->
       unify t then_ty TyUnit node.span;
       TyUnit)
-  | Tree.ExprBlock { body; _ } ->
+  | Node.ExprBlock { body; _ } ->
     if List.length body.items = 0 then TyUnit
     else
       let rec check_stmts = function
@@ -190,15 +190,15 @@ let rec infer t (node : Tree.node) : ty =
           check_stmts rest
       in
       check_stmts body.items
-  | Tree.ExprArray { items } ->
+  | Node.ExprArray { items } ->
     if List.length items.items = 0 then TyArray (fresh_var t)
     else
       let elem_ty = infer t (List.hd items.items) in
       List.iter (fun item -> check t item elem_ty) (List.tl items.items);
       TyArray elem_ty
-  | Tree.ExprTuple { items } -> TyTuple (List.map (infer t) items.items)
-  | Tree.ExprBind { init; _ } -> infer t init
-  | Tree.ExprProc { params; ret_ty; body; _ } ->
+  | Node.ExprTuple { items } -> TyTuple (List.map (infer t) items.items)
+  | Node.ExprBind { init; _ } -> infer t init
+  | Node.ExprProc { params; ret_ty; body; _ } ->
     let param_tys = List.map (fun _ -> fresh_var t) params.items in
     let ret = match ret_ty with Some _ -> fresh_var t | None -> fresh_var t in
     (match body with
@@ -207,9 +207,9 @@ let rec infer t (node : Tree.node) : ty =
       unify t ret body_ty node.span
     | None -> ());
     TyProc { params = param_tys; ret }
-  | Tree.ExprCast { target; _ } -> (
+  | Node.ExprCast { target; _ } -> (
     match target.kind with
-    | Tree.TyNamed { name } -> (
+    | Node.TyNamed { name } -> (
       let name_str = Interner.resolve t.interner name in
       match name_str with
       | "Int" -> TyInt
@@ -220,15 +220,15 @@ let rec infer t (node : Tree.node) : ty =
       | "Any" -> TyAny
       | _ -> fresh_var t)
     | _ -> fresh_var t)
-  | Tree.ExprTest _ -> TyBool
-  | Tree.ExprReturn { value } -> (
+  | Node.ExprTest _ -> TyBool
+  | Node.ExprReturn { value } -> (
     match value with
     | Some v ->
       let _ = infer t v in
       TyNever
     | None -> TyNever)
-  | Tree.ExprBreak _ -> TyNever
-  | Tree.ExprContinue -> TyNever
+  | Node.ExprBreak _ -> TyNever
+  | Node.ExprContinue -> TyNever
   | _ -> fresh_var t
 
 and check t node expected =
