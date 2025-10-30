@@ -4,7 +4,7 @@
     1. Collect metadata from bound tree (procedures, strings, types)
     2. Emit bytecode using metadata for lookups
 
-    Bound tree nodes have node.sym and node.ty filled by resolver and checker. *)
+    Bound tree nodes have [node.sym] and [node.ty] filled by resolver and checker. *)
 
 (** Emitter state tracking locals, constants, and metadata. *)
 type t
@@ -20,5 +20,5 @@ val emit_program : t -> Node.program -> Instr.program
 
 (** Translate bound tree and write bytecode to file.
 
-    Encodes program as .msc bytecode format. *)
+    Encodes program as [*.msc] bytecode format. *)
 val emit_to_file : t -> Node.program -> string -> unit
