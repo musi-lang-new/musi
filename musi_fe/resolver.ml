@@ -114,7 +114,7 @@ let rec resolve_node t (node : Node.node) =
       let name_str = Interner.resolve t.interner name in
       let diag =
         Diagnostic.error
-          (Printf.sprintf "undefined name '%s'" name_str)
+          (Printf.sprintf "use of undefined name '%s'" name_str)
           node.span
       in
       let diag =
