@@ -1,19 +1,24 @@
 type severity = Error | Warning | Note
+type fixit = { span : Span.t; replacement : string }
 
 type t = {
     severity : severity
   ; message : string
   ; span : Span.t
   ; notes : (string * Span.t) list
+  ; fixits : fixit list
 }
 
 type diagnostic_bag = { diags : t list; errors : int; warnings : int }
 
-let make severity message span = { severity; message; span; notes = [] }
+let make severity message span =
+  { severity; message; span; notes = []; fixits = [] }
+
 let error message span = make Error message span
 let warning message span = make Warning message span
 let note message span = make Note message span
 let with_note t message span = { t with notes = (message, span) :: t.notes }
+let with_fixit t fixit = { t with fixits = fixit :: t.fixits }
 let empty_bag = { diags = []; errors = 0; warnings = 0 }
 let is_empty bag = bag.diags = []
 let has_errors bag = bag.errors > 0
@@ -134,6 +139,15 @@ let emit ppf diag files =
             c
             note_prefix
             msg)
-      (List.rev diag.notes)
+      (List.rev diag.notes);
+    List.iter
+      (fun fixit ->
+        Format.fprintf
+          ppf
+          " %s | %sfixit: replace with '%s'@."
+          (bold (String.make (String.length (string_of_int line)) ' '))
+          (String.make (col - 1) ' ')
+          fixit.replacement)
+      (List.rev diag.fixits)
 
 let emit_all ppf bag files = List.iter (fun d -> emit ppf d files) (to_list bag)
