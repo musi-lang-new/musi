@@ -4,7 +4,7 @@ type t
 (** Signals runtime failures like type errors or stack overflow. *)
 exception Runtime_error of string
 
-(** Initialises a VM with loaded bytecode and stdlib intrinsics. *)
+(** Creates a VM with loaded bytecode and stdlib intrinsics. *)
 val create : Instr.program -> t
 
 (** Adds a native function callable from bytecode. *)
