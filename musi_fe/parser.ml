@@ -1,4 +1,4 @@
-(** Pratt parser for Musi. *)
+(** Builds AST using precedence climbing for expressions. *)
 
 (* ========================================
    PRECEDENCE
