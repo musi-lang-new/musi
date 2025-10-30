@@ -67,13 +67,19 @@ let warning t msg start =
   t.diags :=
     Diagnostic.add !(t.diags) (Diagnostic.warning msg (make_span t start))
 
-let is_valid_utf8_start c =
-  let code = Char.code c in
-  code <= ascii_max || (code >= utf8_min_2byte && code <= utf8_max_4byte)
-
-let validate_utf8_char t pos =
-  if pos >= String.length t.source then true
-  else is_valid_utf8_start t.source.[pos]
+let validate_utf8_range t start end_pos =
+  let rec check pos =
+    if pos >= end_pos then ()
+    else
+      let code = Char.code t.source.[pos] in
+      if
+        not
+          (code <= ascii_max
+          || (code >= utf8_min_2byte && code <= utf8_max_4byte))
+      then error t (Printf.sprintf "illegal UTF-8 byte '0x%02X'" code) pos;
+      check (pos + 1)
+  in
+  check start
 
 let validate_unicode_codepoint code pos t =
   if code > max_unicode_codepoint then (
@@ -450,21 +456,16 @@ let scan_number t start =
    ======================================== *)
 
 let scan_quoted_content t buf quote_char =
+  let content_start = t.pos in
   while (not (at_end t)) && curr_char t <> quote_char && curr_char t <> '\n' do
-    if not (validate_utf8_char t t.pos) then
-      error
-        t
-        (Printf.sprintf
-           "invalid UTF-8 byte: '0x%02X'"
-           (Char.code t.source.[t.pos]))
-        t.pos;
     if curr_char t = '\\' then (
       advance t;
       Buffer.add_char buf (process_escape_char t))
     else (
       Buffer.add_char buf (curr_char t);
       advance t)
-  done
+  done;
+  validate_utf8_range t content_start t.pos
 
 let scan_text_lit t start =
   advance t;
@@ -502,14 +503,8 @@ let scan_template_lit t start =
   advance t;
   let buf = Buffer.create 64 in
   let scan_content () =
+    let content_start = t.pos in
     while (not (at_end t)) && curr_char t <> '`' && curr_char t <> '$' do
-      if not (validate_utf8_char t t.pos) then
-        error
-          t
-          (Printf.sprintf
-             "invalid UTF-8 byte: '0x%02X'"
-             (Char.code t.source.[t.pos]))
-          t.pos;
       if curr_char t = '\\' then (
         advance t;
         Buffer.add_char buf (process_escape_char t))
@@ -517,6 +512,7 @@ let scan_template_lit t start =
         Buffer.add_char buf (curr_char t);
         advance t)
     done;
+    validate_utf8_range t content_start t.pos;
     if curr_char t = '$' && peek_char t = '{' then
       let content = Buffer.contents buf in
       if Buffer.length buf = 0 then
