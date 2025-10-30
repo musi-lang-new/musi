@@ -177,7 +177,7 @@ let rec infer t (node : Node.node) : ty =
       List.iter (fun item -> check t item elem_ty) (List.tl items.items);
       TyArray elem_ty
   | Node.ExprTuple { items } -> TyTuple (List.map (infer t) items.items)
-  | Node.ExprBind { init; _ } -> infer t init
+  | Node.ExprBinding { init; _ } -> infer t init
   | Node.ExprProc { params; ret_ty; body; _ } ->
     let param_tys = List.map (fun _ -> fresh_var t) params.items in
     let ret = match ret_ty with Some _ -> fresh_var t | None -> fresh_var t in
