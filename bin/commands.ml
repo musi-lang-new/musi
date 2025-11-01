@@ -96,6 +96,7 @@ let help () =
   print_endline "    compile <file>    Compile source to bytecode";
   print_endline "    check <file>      Type-check without code generation";
   print_endline "    run <file>        Compile and execute";
+  print_endline "    disasm <file>     Disassemble bytecode file";
   print_endline "    help              Print this message";
   print_endline "    version           Print version information";
   print_endline "";
@@ -103,6 +104,38 @@ let help () =
   print_endline "    -o, --output <file>    Specify output file";
   print_endline "    -h, --help             Print help information";
   print_endline "    -V, --version          Print version information";
+  0
+
+let disasm input =
+  let ic = open_in_bin input in
+  let bytes = Bytes.create (in_channel_length ic) in
+  really_input ic bytes 0 (Bytes.length bytes);
+  close_in ic;
+  let program = Bytecode.decode_program bytes in
+  Printf.printf "Constants (%d):\n" (Array.length program.Instr.constants);
+  Array.iteri
+    (fun i const ->
+      match const with
+      | Instr.CInt32 n -> Printf.printf "  [%d] Int32: %ld\n" i n
+      | Instr.CText s -> Printf.printf "  [%d] Text: %S\n" i s)
+    program.constants;
+  Printf.printf "\nProcedures (%d):\n" (Array.length program.procs);
+  Array.iteri
+    (fun i proc ->
+      Printf.printf
+        "\n[%d] %s (params=%d, locals=%d, external=%b):\n"
+        i
+        (proc : Instr.proc_def).name
+        proc.param_count
+        proc.local_count
+        proc.external_proc;
+      if List.length proc.code > 0 then
+        List.iteri
+          (fun j instr ->
+            Printf.printf "  %04d: %s\n" j (Instr.show_instr instr))
+          proc.code
+      else Printf.printf "  (no code - external or empty)\n")
+    program.procs;
   0
 
 let version () =
