@@ -326,6 +326,45 @@ let test_export_proc () =
     | _ -> fail "expected ExprProc in binding")
   | _ -> fail "expected ExprBinding node"
 
+let test_unsafe_proc () =
+  let node, _ = parse_single "const foo := unsafe proc() { 42 }" in
+  check bool "is ExprBinding" true (is_binding node.Node.kind);
+  let _, _, _, _, init = as_binding node.Node.kind in
+  check bool "init is ExprProc" true (is_proc init.Node.kind);
+  let _, _, _, _, unsafe_, _ = as_proc init.Node.kind in
+  check bool "proc is unsafe" true unsafe_
+
+let test_extern_proc () =
+  let node, interner =
+    parse_single "const foo := extern \"intrinsic\" proc(s: Text)"
+  in
+  check bool "is ExprBinding" true (is_binding node.Node.kind);
+  let _, _, _, _, init = as_binding node.Node.kind in
+  check bool "init is ExprProc" true (is_proc init.Node.kind);
+  let _, _, _, _, _, external_ = as_proc init.Node.kind in
+  check bool "has extern" true (Option.is_some external_);
+  check
+    string
+    "extern ABI"
+    "intrinsic"
+    (Interner.to_string interner (Option.get external_))
+
+let test_unsafe_extern_proc () =
+  let node, interner =
+    parse_single "const foo := unsafe extern \"intrinsic\" proc(s: Text)"
+  in
+  check bool "is ExprBinding" true (is_binding node.Node.kind);
+  let _, _, _, _, init = as_binding node.Node.kind in
+  check bool "init is ExprProc" true (is_proc init.Node.kind);
+  let _, _, _, _, unsafe_, external_ = as_proc init.Node.kind in
+  check bool "proc is unsafe" true unsafe_;
+  check bool "has extern" true (Option.is_some external_);
+  check
+    string
+    "extern ABI"
+    "intrinsic"
+    (Interner.to_string interner (Option.get external_))
+
 let test_all_operators () =
   let tokens, interner =
     make_parser "a^b * c / d mod e + f - g shl h shr i and j xor k or l"
@@ -406,5 +445,11 @@ let () =
         ; test_case "export-named" `Quick test_export_named
         ; test_case "export-modifier" `Quick test_export_modifier
         ; test_case "export-proc" `Quick test_export_proc
+        ] )
+    ; ( "extern"
+      , [
+          test_case "unsafe-proc" `Quick test_unsafe_proc
+        ; test_case "extern-proc" `Quick test_extern_proc
+        ; test_case "unsafe-extern-proc" `Quick test_unsafe_extern_proc
         ] )
     ]
