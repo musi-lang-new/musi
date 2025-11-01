@@ -2,7 +2,7 @@
 
 type result = Success of Instr.program | Failure of Diagnostic.diagnostic_bag
 
-let compile_source source =
+let compile_source source search_paths =
   let interner = Interner.create () in
   let file_id = 0 in
 
@@ -11,7 +11,7 @@ let compile_source source =
 
   let ast, parse_diags = Parser.parse_program tokens interner in
 
-  let linker = Linker.create interner [ Sys.getcwd () ] in
+  let linker = Linker.create interner search_paths in
   let resolver = Resolver.create_with_linker interner linker in
 
   (* resolve & check each module as it's loaded *)
@@ -47,11 +47,11 @@ let compile_source source =
     let program = Emitter.emit_program emitter combined_ast in
     Success program
 
-let compile_file input_path output_path =
+let compile_file input_path output_path search_paths =
   let ic = open_in input_path in
   let source = really_input_string ic (in_channel_length ic) in
   close_in ic;
-  match compile_source source with
+  match compile_source source search_paths with
   | Success program ->
     let encoded = Bytecode.encode_program program in
     let oc = open_out_bin output_path in
