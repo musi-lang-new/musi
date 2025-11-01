@@ -14,30 +14,34 @@ let compile_source source =
   let linker = Linker.create interner [ Sys.getcwd () ] in
   let resolver = Resolver.create_with_linker interner linker in
 
+  (* resolve & check each module as it's loaded *)
+  let module_diags = ref [] in
+  Linker.set_on_module_loaded linker (fun (m : Linker.module_info) ->
+    let resolve_diags = Resolver.resolve resolver m.ast in
+    let checker = Checker.create interner resolver in
+    let check_diags = Checker.check checker m.ast in
+    module_diags :=
+      Diagnostic.merge [ resolve_diags; check_diags ] :: !module_diags);
+
+  (* resolve & check main AST (triggs module loading) *)
   let resolve_diags_main = Resolver.resolve resolver ast in
-  let modules = Linker.all_modules linker in
-  let module_resolve_diags =
-    List.map
-      (fun (m : Linker.module_info) -> Resolver.resolve resolver m.ast)
-      modules
-  in
-
-  let resolve_diags =
-    Diagnostic.merge ([ resolve_diags_main ] @ module_resolve_diags)
-  in
-
-  let module_asts = List.map (fun (m : Linker.module_info) -> m.ast) modules in
-  let combined_ast = List.concat (module_asts @ [ ast ]) in
-
-  let checker = Checker.create interner resolver in
-  let check_diags = Checker.check checker combined_ast in
+  let checker_main = Checker.create interner resolver in
+  let check_diags_main = Checker.check checker_main ast in
 
   let all_diags =
-    Diagnostic.merge [ lex_diags; parse_diags; resolve_diags; check_diags ]
+    Diagnostic.merge
+      ([ lex_diags; parse_diags; resolve_diags_main; check_diags_main ]
+      @ !module_diags)
   in
 
   if Diagnostic.has_errors all_diags then Failure all_diags
   else
+    (* emit combined program for bytecode generation *)
+    let modules = Linker.all_modules linker in
+    let module_asts =
+      List.map (fun (m : Linker.module_info) -> m.ast) modules
+    in
+    let combined_ast = List.concat (module_asts @ [ ast ]) in
     let emitter = Emitter.create interner resolver in
     let program = Emitter.emit_program emitter combined_ast in
     Success program
