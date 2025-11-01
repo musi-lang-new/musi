@@ -11,10 +11,17 @@ type t = {
   ; search_paths : string list
   ; loaded : (string, module_info) Hashtbl.t
   ; mutable loading : string list
+  ; mutable on_module_loaded : module_info -> unit
 }
 
 let create interner search_paths =
-  { interner; search_paths; loaded = Hashtbl.create 16; loading = [] }
+  {
+    interner
+  ; search_paths
+  ; loaded = Hashtbl.create 16
+  ; loading = []
+  ; on_module_loaded = (fun _ -> ())
+  }
 
 let resolve_path t import_path =
   let try_path base =
@@ -82,6 +89,8 @@ and load_module t import_path =
               let info = { path = file_path; ast; exports } in
               Hashtbl.add t.loaded import_path info;
               t.loading <- List.filter (( <> ) import_path) t.loading;
+              t.on_module_loaded info;
               Ok info))
 
 let all_modules t = Hashtbl.fold (fun _ info acc -> info :: acc) t.loaded []
+let set_on_module_loaded t callback = t.on_module_loaded <- callback
