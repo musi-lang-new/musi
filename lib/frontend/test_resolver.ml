@@ -89,6 +89,51 @@ let test_recursive_call () =
   in
   check bool "proc body resolves" false (Diagnostic.has_errors diags)
 
+let test_extern_intrinsic_proc () =
+  let diags, _ =
+    make_resolver "const f := unsafe extern \"intrinsic\" proc (x: Int);"
+  in
+  check
+    bool
+    "extern intrinsic proc resolves"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_extern_intrinsic_call () =
+  let diags, _ =
+    make_resolver
+      "const f := unsafe extern \"intrinsic\" proc (x: Int); const y := f(42)"
+  in
+  check
+    bool
+    "call to extern intrinsic resolves"
+    false
+    (Diagnostic.has_errors diags)
+
+let test_extern_intrinsic_symbol () =
+  let source = "const f := unsafe extern \"intrinsic\" proc (x: Int);" in
+  let interner = Interner.create () in
+  let lexer = Lexer.make 0 source interner in
+  let tokens, _lex_diags = Lexer.lex lexer in
+  let ast, _parse_diags = Parser.parse_program tokens interner in
+  let resolver = Resolver.create interner in
+  let _diags = Resolver.resolve resolver ast in
+  let f_sym = Interner.intern interner "f" in
+  let intrinsic_sym = Interner.intern interner "intrinsic" in
+  let sym_opt = Resolver.lookup resolver f_sym in
+  match sym_opt with
+  | Some sym -> (
+    match sym.kind with
+    | Resolver.SymProc { params; extern_ } ->
+      check int "extern proc has 1 param" 1 params;
+      check
+        bool
+        "extern proc has intrinsic ABI"
+        true
+        (extern_ = Some intrinsic_sym)
+    | _ -> fail "expected SymProc")
+  | None -> fail "symbol not found"
+
 let () =
   run
     "Resolver"
@@ -107,6 +152,12 @@ let () =
         ; test_case "undefined" `Quick test_undefined_proc
         ; test_case "multiple" `Quick test_multiple_procs
         ; test_case "recursive" `Quick test_recursive_call
+        ; test_case "extern-intrinsic" `Quick test_extern_intrinsic_proc
+        ; test_case "extern-intrinsic-call" `Quick test_extern_intrinsic_call
+        ; test_case
+            "extern-intrinsic-symbol"
+            `Quick
+            test_extern_intrinsic_symbol
         ] )
     ; ( "scoping"
       , [
