@@ -179,6 +179,8 @@ and parse_primary_expr t =
     | Token.KwIf -> parse_expr_if t
     | Token.KwMatch -> parse_expr_match t
     | Token.KwProc -> parse_expr_proc t
+    | Token.KwImport -> parse_expr_import t
+    | Token.KwExport -> parse_expr_export t
     | _ ->
       error t "expected expression" tok.span;
       Node.Error
@@ -386,6 +388,77 @@ and parse_match_case t : Node.match_case =
   ; trailing = []
   }
 
+and parse_expr_import t =
+  let _ = expect t Token.LBrace in
+  let items = parse_import_export_items t in
+  let _ = expect t Token.RBrace in
+  let _ = expect t Token.KwFrom in
+  let source =
+    match (curr t).kind with
+    | Token.TextLit sym ->
+      advance t;
+      sym
+    | _ ->
+      error t "expected text literal for 'import' source" (curr t).span;
+      Interner.intern t.interner "<error>"
+  in
+  Node.ExprImport { source; kind = Node.Named { items } }
+
+and parse_expr_export t =
+  if (curr t).kind = Token.LBrace then (
+    advance t;
+    let items = parse_import_export_items t in
+    let _ = expect t Token.RBrace in
+    let source =
+      if (curr t).kind = Token.KwFrom then (
+        advance t;
+        match (curr t).kind with
+        | Token.TextLit sym ->
+          advance t;
+          Some sym
+        | _ ->
+          error t "expected text literal for 'export' source" (curr t).span;
+          Some (Interner.intern t.interner "<error>"))
+      else None
+    in
+    Node.ExprExport { source; kind = Node.Named { items } })
+  else (
+    error t "expected '{' after 'export'" (curr t).span;
+    Node.Error)
+
+and parse_import_export_items t =
+  let rec loop acc =
+    if (curr t).kind = Token.RBrace || (curr t).kind = Token.Eof then
+      List.rev acc
+    else
+      let start = (curr t).span in
+      let name =
+        match (curr t).kind with
+        | Token.Ident sym ->
+          advance t;
+          sym
+        | _ ->
+          error t "expected identifier" (curr t).span;
+          Interner.intern t.interner "<error>"
+      in
+      let alias =
+        if (curr t).kind = Token.KwAs then (
+          advance t;
+          match (curr t).kind with
+          | Token.Ident sym ->
+            advance t;
+            Some sym
+          | _ ->
+            error t "expected identifier after 'as'" (curr t).span;
+            Some (Interner.intern t.interner "<error>"))
+        else None
+      in
+      let item = { Node.name; alias; span = span_to_curr t start } in
+      if (curr t).kind = Token.Comma then advance t;
+      loop (item :: acc)
+  in
+  loop []
+
 and parse_expr_proc t =
   let open_span = (curr t).span in
   let _ = expect t Token.LParen in
@@ -549,7 +622,22 @@ let parse_program tokens interner =
       advance t;
       loop acc)
     else
+      let is_export_stmt =
+        if (curr t).kind = Token.KwExport then (
+          let saved_pos = t.stream.pos in
+          Token.advance t.stream;
+          let _ = collect_trivia t in
+          let next_is_brace = (Token.curr t.stream).kind = Token.LBrace in
+          t.stream.pos <- saved_pos;
+          next_is_brace)
+        else false
+      in
+      let exported = (curr t).kind = Token.KwExport && not is_export_stmt in
+      if exported then advance t;
       let node = parse_expr t in
+      let node =
+        if exported then { node with Node.exported = true } else node
+      in
       if (curr t).kind = Token.Semi then advance t;
       loop (node :: acc)
   in
