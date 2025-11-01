@@ -18,3 +18,6 @@ val load_module : t -> string -> (module_info, string) result
 
 (** Get all loaded modules. *)
 val all_modules : t -> module_info list
+
+(** Set callback invoked when module is loaded. *)
+val set_on_module_loaded : t -> (module_info -> unit) -> unit
