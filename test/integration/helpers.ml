@@ -27,17 +27,21 @@ let compile_and_run_with_packages packages main_source =
   let tokens, _lex_diags = Lexer.lex lexer in
   let ast, _parse_diags = Parser.parse_program tokens interner in
   let resolver = Resolver.create_with_linker interner linker in
-  let _resolve_diags = Resolver.resolve resolver ast in
-  let emitter = Emitter.create interner resolver in
-  let program = Emitter.emit_program emitter ast in
-  let vm = Vm.create program in
-  let result = Vm.run vm in
+  let resolve_diags = Resolver.resolve resolver ast in
   let rec rmdir path =
     if Sys.is_directory path then (
       Sys.readdir path
       |> Array.iter (fun name -> rmdir (Filename.concat path name));
       Unix.rmdir path)
     else Sys.remove path
+  in
+  let result =
+    if Diagnostic.has_errors resolve_diags then 1
+    else
+      let emitter = Emitter.create interner resolver in
+      let program = Emitter.emit_program emitter ast in
+      let vm = Vm.create program in
+      Vm.run vm
   in
   rmdir dir;
   result
