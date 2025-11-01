@@ -189,9 +189,7 @@ let rec emit_expr t (node : Node.node) =
           (fun (p : Metadata.proc_entry) -> p.name = target_name)
           procs
       with
-      | Some proc ->
-        if proc.bytecode_offset >= 0 then
-          emit_instr t (Instr.Call proc.bytecode_offset)
+      | Some proc -> emit_instr t (Instr.Call proc.id)
       | None -> ())
     | _ -> ())
   | Node.ExprIf { cond; then_br; else_br } -> (
