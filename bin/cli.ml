@@ -2,6 +2,7 @@ type command =
   | Compile of { input : string; output : string option }
   | Check of { input : string }
   | Run of { input : string }
+  | Disasm of { input : string }
   | Help
   | Version
 
@@ -17,6 +18,7 @@ let parse_args () =
     Compile { input; output }
   | _ :: "check" :: input :: _ -> Check { input }
   | _ :: "run" :: input :: _ -> Run { input }
+  | _ :: "disasm" :: input :: _ -> Disasm { input }
   | _ :: ("help" | "--help" | "-h") :: _ -> Help
   | _ :: ("version" | "--version" | "-V") :: _ -> Version
   | _ :: input :: rest when String.ends_with ~suffix:".ms" input ->
