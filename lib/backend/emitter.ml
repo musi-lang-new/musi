@@ -148,9 +148,14 @@ let rec emit_expr t (node : Node.node) =
   | Node.ExprBoolLit { value } ->
     if value then emit_ldci4 t 1l else emit_ldci4 t 0l
   | Node.ExprUnitLit -> emit_instr t Instr.LdUnit
-  | Node.ExprIdent { name } ->
-    let idx = alloc_local t name in
-    emit_ldloc t idx
+  | Node.ExprIdent { name } -> (
+    match Resolver.lookup t.resolver name with
+    | Some { kind = Resolver.SymAlias { target; _ }; _ } ->
+      let idx = alloc_local t target in
+      emit_ldloc t idx
+    | _ ->
+      let idx = alloc_local t name in
+      emit_ldloc t idx)
   | Node.ExprBinary { op; lhs; rhs } -> (
     emit_expr t lhs;
     emit_expr t rhs;
@@ -173,9 +178,16 @@ let rec emit_expr t (node : Node.node) =
     List.iter (emit_expr t) args.items;
     match callee.kind with
     | Node.ExprIdent { name } -> (
+      let target_name =
+        match Resolver.lookup t.resolver name with
+        | Some { kind = Resolver.SymAlias { target; _ }; _ } -> target
+        | _ -> name
+      in
       let procs = Metadata.all_procs t.metadata in
       match
-        List.find_opt (fun (p : Metadata.proc_entry) -> p.name = name) procs
+        List.find_opt
+          (fun (p : Metadata.proc_entry) -> p.name = target_name)
+          procs
       with
       | Some proc ->
         if proc.bytecode_offset >= 0 then
