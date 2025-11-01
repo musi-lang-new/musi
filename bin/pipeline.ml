@@ -17,8 +17,9 @@ let compile_source source =
   (* resolve & check each module as it's loaded *)
   let module_diags = ref [] in
   Linker.set_on_module_loaded linker (fun (m : Linker.module_info) ->
-    let resolve_diags = Resolver.resolve resolver m.ast in
-    let checker = Checker.create interner resolver in
+    let module_resolver = Resolver.create interner in
+    let resolve_diags = Resolver.resolve module_resolver m.ast in
+    let checker = Checker.create interner module_resolver in
     let check_diags = Checker.check checker m.ast in
     module_diags :=
       Diagnostic.merge [ resolve_diags; check_diags ] :: !module_diags);
