@@ -125,6 +125,20 @@ let test_complex_block () =
   let diags = make_checker "{ const x := 1; const y := 2; x + y }" in
   check bool "complex block type checks" false (Diagnostic.has_errors diags)
 
+let test_extern_requires_unsafe () =
+  let diags = make_checker "const f := extern \"intrinsic\" proc (x: Int);" in
+  check
+    bool
+    "extern without unsafe produces error"
+    true
+    (Diagnostic.has_errors diags)
+
+let test_unsafe_extern_valid () =
+  let diags =
+    make_checker "const f := unsafe extern \"intrinsic\" proc (x: Int);"
+  in
+  check bool "unsafe extern is valid" false (Diagnostic.has_errors diags)
+
 let () =
   run
     "Checker"
@@ -176,4 +190,9 @@ let () =
         ; test_case "any-type" `Quick test_gradual_typing
         ] )
     ; ("expressions", [ test_case "nested" `Quick test_nested_expr ])
+    ; ( "safety"
+      , [
+          test_case "extern-requires-unsafe" `Quick test_extern_requires_unsafe
+        ; test_case "unsafe-extern-valid" `Quick test_unsafe_extern_valid
+        ] )
     ]
