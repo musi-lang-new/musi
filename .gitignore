@@ -27,8 +27,8 @@
 .cursorignore
 .cursorrules
 .windsurfrules
-!CLAUDE.md
-!GEMINI.md
+CLAUDE.md
+GEMINI.md
 
 # Visual Studio Code settings
 .vscode/*
@@ -39,9 +39,8 @@
 !.vscode/*.code-snippets
 
 # Documentation markdown files
-!docs/**/*.md
+!docs/*.md
 docs/_priv/*.md
-*.md
 !CODE_OF_CONDUCT.md
 !CONTRIBUTING.md
 !LICENSE
