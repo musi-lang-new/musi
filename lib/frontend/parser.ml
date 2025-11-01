@@ -97,6 +97,23 @@ let expect t kind =
 let span_from_to s1 s2 = Span.make (Span.file s1) (Span.start s1) (Span.end_ s2)
 let span_to_curr t s = span_from_to s (curr t).span
 
+let parse_unsafe_modifier t =
+  let is_unsafe = (curr t).kind = Token.KwUnsafe in
+  if is_unsafe then advance t;
+  is_unsafe
+
+let parse_extern_modifier t =
+  if (curr t).kind = Token.KwExtern then (
+    advance t;
+    match (curr t).kind with
+    | Token.TextLit sym ->
+      advance t;
+      Some sym
+    | _ ->
+      error t "expected ABI text after 'extern'" (curr t).span;
+      Some (Interner.intern t.interner "<error>"))
+  else None
+
 (* ========================================
    NODE CONSTRUCTORS
    ======================================== *)
@@ -301,7 +318,17 @@ and parse_expr_binding t is_mutable =
     else None
   in
   let _ = expect t Token.ColonEq in
-  let init = parse_expr t in
+  let unsafe_ = parse_unsafe_modifier t in
+  let external_ = parse_extern_modifier t in
+  let init =
+    if (curr t).kind = Token.KwProc then (
+      let leading = collect_trivia t in
+      let tok = curr t in
+      advance t;
+      let proc_kind = parse_expr_proc_with_modifiers t unsafe_ external_ in
+      make_node proc_kind tok.span leading)
+    else parse_expr t
+  in
   Node.ExprBinding { mutable_ = is_mutable; weakness = false; pat; ty; init }
 
 and parse_expr_return t =
@@ -459,7 +486,9 @@ and parse_import_export_items t =
   in
   loop []
 
-and parse_expr_proc t =
+and parse_expr_proc t = parse_expr_proc_with_modifiers t false None
+
+and parse_expr_proc_with_modifiers t unsafe_ external_ =
   let open_span = (curr t).span in
   let _ = expect t Token.LParen in
   let rec loop items seps =
@@ -489,15 +518,7 @@ and parse_expr_proc t =
       Some (parse_expr t))
     else None
   in
-  Node.ExprProc
-    {
-      params
-    ; ret_ty
-    ; body
-    ; asyncness = false
-    ; unsafe_ = false
-    ; external_ = None
-    }
+  Node.ExprProc { params; ret_ty; body; asyncness = false; unsafe_; external_ }
 
 (* ========================================
    PATTERN PARSING
