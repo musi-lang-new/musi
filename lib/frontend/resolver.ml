@@ -101,7 +101,7 @@ let rec resolve_node t (node : Node.node) =
   match node.kind with
   | Node.ExprBinding { mutable_; weakness; pat; init; _ } ->
     resolve_node t init;
-    resolve_pattern t pat mutable_ weakness
+    resolve_pattern_with_init t pat mutable_ weakness init
   | Node.ExprProc { params; body; _ } ->
     enter_scope t;
     List.iter (resolve_param t) params.items;
@@ -200,6 +200,21 @@ and resolve_pattern t pat mutable_ weak =
     List.iter (fun p -> resolve_pattern t p mutable_ weak) items.items
   | Node.PatWildcard | Node.PatRest _ -> ()
   | _ -> resolve_node t pat
+
+and resolve_pattern_with_init t pat mutable_ weak init =
+  match (pat.kind, init.kind) with
+  | Node.ExprIdent { name }, Node.ExprProc { params; external_; _ } ->
+    let sym =
+      {
+        name
+      ; kind =
+          SymProc { params = List.length params.items; extern_ = external_ }
+      ; span = pat.span
+      ; ty = None
+      }
+    in
+    define t sym
+  | _ -> resolve_pattern t pat mutable_ weak
 
 and resolve_param t (param : Node.param) =
   let sym =
