@@ -327,6 +327,120 @@ let encode_constants constants =
   in
   result
 
+let decode_instr bytes pos =
+  let opcode = Bytes.get_uint8 bytes pos in
+  match opcode with
+  | 0x00 -> (Nop, 1)
+  | 0x02 -> (LdUnit, 1)
+  | 0x04 -> (LdcI4M1, 1)
+  | 0x05 -> (LdcI4_0, 1)
+  | 0x06 -> (LdcI4_1, 1)
+  | 0x07 -> (LdcI4_2, 1)
+  | 0x08 -> (LdcI4_3, 1)
+  | 0x09 -> (LdcI4_4, 1)
+  | 0x0A -> (LdcI4_5, 1)
+  | 0x0B -> (LdcI4_6, 1)
+  | 0x0C -> (LdcI4_7, 1)
+  | 0x0D -> (LdcI4_8, 1)
+  | 0x0E -> (LdcI4S (Bytes.get_uint8 bytes (pos + 1)), 2)
+  | 0x0F -> (LdcI4 (Bytes.get_int32_le bytes (pos + 1)), 5)
+  | 0x13 -> (Ldstr (Bytes.get_int32_le bytes (pos + 1) |> Int32.to_int), 5)
+  | 0x14 -> (Dup, 1)
+  | 0x15 -> (Pop, 1)
+  | 0x20 -> (Ldloc_0, 1)
+  | 0x21 -> (Ldloc_1, 1)
+  | 0x22 -> (Ldloc_2, 1)
+  | 0x23 -> (Ldloc_3, 1)
+  | 0x24 -> (LdlocS (Bytes.get_uint8 bytes (pos + 1)), 2)
+  | 0x25 -> (Ldloc (Bytes.get_int32_le bytes (pos + 1) |> Int32.to_int), 5)
+  | 0x28 -> (Stloc_0, 1)
+  | 0x29 -> (Stloc_1, 1)
+  | 0x2A -> (Stloc_2, 1)
+  | 0x2B -> (Stloc_3, 1)
+  | 0x2C -> (StlocS (Bytes.get_uint8 bytes (pos + 1)), 2)
+  | 0x2D -> (Stloc (Bytes.get_int32_le bytes (pos + 1) |> Int32.to_int), 5)
+  | 0x60 -> (Add, 1)
+  | 0x62 -> (Sub, 1)
+  | 0x64 -> (Mul, 1)
+  | 0x66 -> (Div, 1)
+  | 0x69 -> (Neg, 1)
+  | 0x80 -> (Ceq, 1)
+  | 0x81 -> (Cgt, 1)
+  | 0x82 -> (Clt, 1)
+  | 0xF0 -> (Call (Bytes.get_int32_le bytes (pos + 1) |> Int32.to_int), 5)
+  | 0xF3 -> (Ret, 1)
+  | _ -> failwith (Printf.sprintf "unknown opcode: 0x%02X" opcode)
+
+let decode_program bytes =
+  let magic = Bytes.sub_string bytes 0 4 in
+  if magic <> "MUSI" then failwith "invalid bytecode file";
+  let constant_offset = Bytes.get_int32_le bytes 12 |> Int32.to_int in
+  let _type_offset = Bytes.get_int32_le bytes 16 |> Int32.to_int in
+  let proc_offset = Bytes.get_int32_le bytes 20 |> Int32.to_int in
+  let const_count = Bytes.get_int32_le bytes constant_offset |> Int32.to_int in
+  let constants = Array.make const_count (CInt32 0l) in
+  let pos = ref (constant_offset + 4) in
+  for i = 0 to const_count - 1 do
+    let tag = Bytes.get_uint8 bytes !pos in
+    pos := !pos + 1;
+    constants.(i) <-
+      (match tag with
+      | 0x01 ->
+        let value = Bytes.get_int32_le bytes !pos in
+        pos := !pos + 4;
+        CInt32 value
+      | 0x05 ->
+        let len = Bytes.get_int32_le bytes !pos |> Int32.to_int in
+        pos := !pos + 4;
+        let text = Bytes.sub_string bytes !pos len in
+        pos := !pos + len;
+        CText text
+      | _ -> failwith "unknown constant type")
+  done;
+  let proc_count = Bytes.get_int32_le bytes proc_offset |> Int32.to_int in
+  let procs =
+    Array.make
+      proc_count
+      {
+        name = ""
+      ; param_count = 0
+      ; local_count = 0
+      ; code = []
+      ; external_proc = false
+      }
+  in
+  pos := proc_offset + 4;
+  for i = 0 to proc_count - 1 do
+    let name_len = Bytes.get_int32_le bytes !pos |> Int32.to_int in
+    pos := !pos + 4;
+    let name = Bytes.sub_string bytes !pos name_len in
+    pos := !pos + name_len;
+    let param_count = Bytes.get_int32_le bytes !pos |> Int32.to_int in
+    pos := !pos + 4;
+    let local_count = Bytes.get_int32_le bytes !pos |> Int32.to_int in
+    pos := !pos + 8;
+    let is_extern = Bytes.get_int32_le bytes !pos <> 0l in
+    pos := !pos + 4;
+    let code_len = Bytes.get_int32_le bytes !pos |> Int32.to_int in
+    pos := !pos + 4;
+    let code_start = !pos in
+    let code = ref [] in
+    while !pos < code_start + code_len do
+      let instr, size = decode_instr bytes !pos in
+      code := instr :: !code;
+      pos := !pos + size
+    done;
+    procs.(i) <-
+      {
+        name
+      ; param_count
+      ; local_count
+      ; code = List.rev !code
+      ; external_proc = is_extern
+      }
+  done;
+  { constants; procs; records = [] }
+
 let encode_program program =
   let header = Bytes.create 32 in
   Bytes.blit_string "MUSI" 0 header 0 4;

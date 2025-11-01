@@ -19,5 +19,8 @@ val encode_record_types : Instr.record_type_def list -> bytes
 (** Serializes constant pool with count prefix. *)
 val encode_constants : Instr.constant array -> bytes
 
+(** Deserializes a complete program from bytecode. *)
+val decode_program : bytes -> Instr.program
+
 (** Serializes a complete program with header and all sections. *)
 val encode_program : Instr.program -> bytes
