@@ -24,14 +24,15 @@ let format_success_summary diags =
       warning_count
       (if warning_count = 1 then "" else "s")
 
-let compile input output_opt =
+let compile input output_opt search_paths =
   let output =
     match output_opt with
     | Some o -> o
     | None -> Filename.remove_extension input ^ ".msc"
   in
+  let paths = if search_paths = [] then [ "./stdlib"; "." ] else search_paths in
   Output.compiling input;
-  match Pipeline.compile_file input output with
+  match Pipeline.compile_file input output paths with
   | Pipeline.Success _ ->
     Output.finished "dev [fast-compile]" output;
     0
@@ -43,7 +44,7 @@ let compile input output_opt =
     Output.error (format_error_summary diags);
     1
 
-let check input =
+let check input search_paths =
   Output.checking input;
   let ic = open_in input in
   let source = really_input_string ic (in_channel_length ic) in
@@ -51,10 +52,11 @@ let check input =
 
   let interner = Interner.create () in
   let file_id = 0 in
+  let paths = if search_paths = [] then [ "./stdlib"; "." ] else search_paths in
   let lexer = Lexer.make file_id source interner in
   let tokens, lex_diags = Lexer.lex lexer in
   let ast, parse_diags = Parser.parse_program tokens interner in
-  let linker = Linker.create interner [ Sys.getcwd () ] in
+  let linker = Linker.create interner paths in
   let resolver = Resolver.create_with_linker interner linker in
   let resolve_diags = Resolver.resolve resolver ast in
   let checker = Checker.create interner resolver in
@@ -72,12 +74,13 @@ let check input =
     Output.finished "dev [fast-compile]" (format_success_summary all_diags);
     0)
 
-let run input =
+let run input search_paths =
   Output.running input;
   let ic = open_in input in
   let source = really_input_string ic (in_channel_length ic) in
   close_in ic;
-  match Pipeline.compile_source source with
+  let paths = if search_paths = [] then [ "./stdlib"; "." ] else search_paths in
+  match Pipeline.compile_source source paths with
   | Pipeline.Success program ->
     let vm = Vm.create program in
     Vm.run vm
@@ -102,6 +105,7 @@ let help () =
   print_endline "";
   print_endline "OPTIONS:";
   print_endline "    -o, --output <file>    Specify output file";
+  print_endline "    -I <path>              Add module search path";
   print_endline "    -h, --help             Print help information";
   print_endline "    -V, --version          Print version information";
   0
