@@ -11,4 +11,4 @@
 (test
  (name test_packages)
  (modules test_packages)
- (libraries helpers alcotest unix))
+ (libraries helpers alcotest))
