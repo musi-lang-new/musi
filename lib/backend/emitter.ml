@@ -177,7 +177,9 @@ let rec emit_expr t (node : Node.node) =
       match
         List.find_opt (fun (p : Metadata.proc_entry) -> p.name = name) procs
       with
-      | Some proc -> emit_instr t (Instr.Call proc.id)
+      | Some proc ->
+        if proc.bytecode_offset >= 0 then
+          emit_instr t (Instr.Call proc.bytecode_offset)
       | None -> ())
     | _ -> ())
   | Node.ExprIf { cond; then_br; else_br } -> (
@@ -257,8 +259,16 @@ let emit_main_wrapper t program =
   ; external_proc = false
   }
 
-let emit_program_internal t program =
-  collect_metadata t program;
+let emit_extern_stub t name param_count =
+  {
+    Instr.name = Interner.resolve t.interner name
+  ; param_count
+  ; local_count = 0
+  ; code = []
+  ; external_proc = true
+  }
+
+let collect_proc_defs t program =
   let proc_defs = ref [] in
   List.iter
     (fun (node : Node.node) ->
@@ -267,16 +277,42 @@ let emit_program_internal t program =
         match (pat.kind, init.kind) with
         | Node.ExprIdent { name }, Node.ExprProc { params; body; external_; _ }
           ->
-          if Option.is_none external_ then
-            proc_defs := emit_proc t name params.items body :: !proc_defs
+          let param_count = List.length params.items in
+          if Option.is_some external_ then
+            proc_defs := emit_extern_stub t name param_count :: !proc_defs
+          else proc_defs := emit_proc t name params.items body :: !proc_defs
         | _ -> ())
       | _ -> ())
     program;
+  List.rev !proc_defs
+
+let fixup_proc_offsets t program =
+  List.iteri
+    (fun idx (node : Node.node) ->
+      match node.kind with
+      | Node.ExprBinding { pat; init; _ } -> (
+        match (pat.kind, init.kind) with
+        | Node.ExprIdent { name }, Node.ExprProc _ ->
+          let procs = Metadata.all_procs t.metadata in
+          let proc_entry =
+            List.find_opt (fun (p : Metadata.proc_entry) -> p.name = name) procs
+          in
+          Option.iter
+            (fun (entry : Metadata.proc_entry) ->
+              entry.bytecode_offset <- idx + 1)
+            proc_entry
+        | _ -> ())
+      | _ -> ())
+    program
+
+let emit_program_internal t program =
+  collect_metadata t program;
+  let proc_defs = collect_proc_defs t program in
+  fixup_proc_offsets t program;
   let main_proc = emit_main_wrapper t program in
-  let const_list = get_constant_pool t in
-  let proc_list = main_proc :: List.rev !proc_defs in
+  let proc_list = main_proc :: proc_defs in
   {
-    Instr.constants = Array.of_list const_list
+    Instr.constants = Array.of_list (get_constant_pool t)
   ; procs = Array.of_list proc_list
   ; records = []
   }
