@@ -10,7 +10,7 @@ let compile_and_run source =
   let vm = Vm.create program in
   Vm.run vm
 
-let compile_and_run_with_packages packages main_source =
+let compile_and_run_with_modules modules main_source =
   let dir = Filename.temp_file "musi_test_" "" in
   Unix.unlink dir;
   Unix.mkdir dir 0o755;
@@ -20,7 +20,7 @@ let compile_and_run_with_packages packages main_source =
       let oc = open_out path in
       output_string oc source;
       close_out oc)
-    packages;
+    modules;
   let interner = Interner.create () in
   let linker = Linker.create interner [ dir ] in
   let lexer = Lexer.make 0 main_source interner in
@@ -46,5 +46,5 @@ let compile_and_run_with_packages packages main_source =
   rmdir dir;
   result
 
-let compile_and_run_with_package package_name package_source main_source =
-  compile_and_run_with_packages [ (package_name, package_source) ] main_source
+let compile_and_run_with_module module_name module_source main_source =
+  compile_and_run_with_modules [ (module_name, module_source) ] main_source
