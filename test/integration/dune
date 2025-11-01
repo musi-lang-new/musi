@@ -1,9 +1,14 @@
 (library
  (name helpers)
  (modules helpers)
- (libraries shared frontend backend runtime))
+ (libraries shared frontend backend runtime unix))
 
 (test
  (name test_extern_intrinsics)
  (modules test_extern_intrinsics)
  (libraries helpers alcotest))
+
+(test
+ (name test_packages)
+ (modules test_packages)
+ (libraries helpers alcotest unix))
