@@ -33,6 +33,24 @@ let test_no_procs () =
   let program = make_emitter "const x := 1;" in
   check int "only main procedure" 1 (Array.length program.procs)
 
+let test_extern_intrinsic_proc () =
+  let program =
+    make_emitter "const f := unsafe extern \"intrinsic\" proc (x: Int);"
+  in
+  check int "main only, extern has no body" 1 (Array.length program.procs)
+
+let test_extern_intrinsic_call () =
+  let program =
+    make_emitter
+      "const f := unsafe extern \"intrinsic\" proc (x: Int); const y := f(42);"
+  in
+  check int "main only, extern has no body" 1 (Array.length program.procs);
+  let main_proc = program.procs.(0) in
+  let has_call =
+    List.exists (function Instr.Call _ -> true | _ -> false) main_proc.code
+  in
+  check bool "main contains call to extern" true has_call
+
 let () =
   run
     "Emitter"
@@ -43,5 +61,7 @@ let () =
         ; test_case "proc_call" `Quick test_proc_call
         ; test_case "multiple_procs" `Quick test_multiple_procs
         ; test_case "no_procs" `Quick test_no_procs
+        ; test_case "extern_intrinsic_proc" `Quick test_extern_intrinsic_proc
+        ; test_case "extern_intrinsic_call" `Quick test_extern_intrinsic_call
         ] )
     ]
