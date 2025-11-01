@@ -37,7 +37,18 @@ let extract_exports ast =
     ast;
   !exports
 
-let load_module t import_path =
+let rec resolve_imports t ast =
+  List.fold_left
+    (fun acc (node : Node.node) ->
+      match (acc, node.kind) with
+      | Ok (), Node.ExprImport { source; _ } ->
+        let source_str = Interner.resolve t.interner source in
+        load_module t source_str |> Result.map (fun _ -> ())
+      | _ -> acc)
+    (Ok ())
+    ast
+
+and load_module t import_path =
   match Hashtbl.find_opt t.loaded import_path with
   | Some info -> Ok info
   | None -> (
@@ -46,7 +57,7 @@ let load_module t import_path =
     else
       match resolve_path t import_path with
       | None -> Error (Printf.sprintf "module '%s' not found" import_path)
-      | Some file_path ->
+      | Some file_path -> (
         t.loading <- import_path :: t.loading;
         let ic = open_in file_path in
         let source = really_input_string ic (in_channel_length ic) in
@@ -62,10 +73,15 @@ let load_module t import_path =
             t.loading <- List.filter (( <> ) import_path) t.loading;
             Error (Printf.sprintf "errors in module '%s'" import_path))
           else
-            let exports = extract_exports ast in
-            let info = { path = file_path; ast; exports } in
-            Hashtbl.add t.loaded import_path info;
-            t.loading <- List.filter (( <> ) import_path) t.loading;
-            Ok info)
+            match resolve_imports t ast with
+            | Error msg ->
+              t.loading <- List.filter (( <> ) import_path) t.loading;
+              Error msg
+            | Ok () ->
+              let exports = extract_exports ast in
+              let info = { path = file_path; ast; exports } in
+              Hashtbl.add t.loaded import_path info;
+              t.loading <- List.filter (( <> ) import_path) t.loading;
+              Ok info))
 
 let all_modules t = Hashtbl.fold (fun _ info acc -> info :: acc) t.loaded []
