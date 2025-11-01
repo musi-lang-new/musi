@@ -178,7 +178,9 @@ let rec infer t (node : Node.node) : ty =
       TyArray elem_ty
   | Node.ExprTuple { items } -> TyTuple (List.map (infer t) items.items)
   | Node.ExprBinding { init; _ } -> infer t init
-  | Node.ExprProc { params; ret_ty; body; _ } ->
+  | Node.ExprProc { params; ret_ty; body; unsafe_; external_; _ } ->
+    if Option.is_some external_ && not unsafe_ then
+      error t "external procedures require 'unsafe' modifier" node.span;
     let param_tys = List.map (fun _ -> fresh_var t) params.items in
     let ret = match ret_ty with Some _ -> fresh_var t | None -> fresh_var t in
     (match body with
