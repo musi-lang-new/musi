@@ -19,6 +19,9 @@ type t
 (** Creates a resolver with an empty root scope. *)
 val create : Interner.t -> t
 
+(** Creates a resolver with linker for module resolution. *)
+val create_with_linker : Interner.t -> Linker.t -> t
+
 (** Looks up a symbol in the current scope chain. *)
 val lookup : t -> Interner.symbol -> symbol option
 
