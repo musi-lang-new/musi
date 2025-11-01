@@ -14,13 +14,17 @@ let compile_source source =
   let linker = Linker.create interner [ Sys.getcwd () ] in
   let resolver = Resolver.create_with_linker interner linker in
 
-  ignore (Resolver.resolve resolver ast);
+  let resolve_diags_main = Resolver.resolve resolver ast in
   let modules = Linker.all_modules linker in
-  List.iter
-    (fun (m : Linker.module_info) -> ignore (Resolver.resolve resolver m.ast))
-    modules;
+  let module_resolve_diags =
+    List.map
+      (fun (m : Linker.module_info) -> Resolver.resolve resolver m.ast)
+      modules
+  in
 
-  let resolve_diags = Diagnostic.empty_bag in
+  let resolve_diags =
+    Diagnostic.merge ([ resolve_diags_main ] @ module_resolve_diags)
+  in
 
   let module_asts = List.map (fun (m : Linker.module_info) -> m.ast) modules in
   let combined_ast = List.concat (module_asts @ [ ast ]) in
