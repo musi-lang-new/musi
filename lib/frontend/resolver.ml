@@ -5,11 +5,13 @@ type symbol = {
   ; kind : symbol_kind
   ; span : Span.t
   ; mutable ty : int option
+  ; module_path : string option
 }
 
 and symbol_kind =
   | SymVar of { mutable_ : bool; weak : bool }
   | SymProc of { params : int; extern_ : Node.abi option }
+  | SymAlias of { target : Interner.symbol; target_module : string }
 
 type scope = {
     symbols : (Interner.symbol, symbol) Hashtbl.t
@@ -148,9 +150,11 @@ let resolve_expr_import t (node : Node.node) source kind =
               let sym =
                 {
                   name = import_name
-                ; kind = SymVar { mutable_ = false; weak = false }
+                ; kind =
+                    SymAlias { target = item.name; target_module = source_str }
                 ; span = node.span
                 ; ty = None
+                ; module_path = Some source_str
                 }
               in
               define t sym
@@ -244,7 +248,13 @@ and resolve_pattern t pat mutable_ weak =
   match pat.kind with
   | Node.ExprIdent { name } ->
     let sym =
-      { name; kind = SymVar { mutable_; weak }; span = pat.span; ty = None }
+      {
+        name
+      ; kind = SymVar { mutable_; weak }
+      ; span = pat.span
+      ; ty = None
+      ; module_path = None
+      }
     in
     define t sym
   | Node.PatBind { inner } -> resolve_pattern t inner mutable_ weak
@@ -263,6 +273,7 @@ and resolve_pattern_with_init t pat mutable_ weak init =
           SymProc { params = List.length params.items; extern_ = external_ }
       ; span = pat.span
       ; ty = None
+      ; module_path = None
       }
     in
     define t sym
@@ -275,6 +286,7 @@ and resolve_param t (param : Node.param) =
     ; kind = SymVar { mutable_ = false; weak = false }
     ; span = param.span
     ; ty = None
+    ; module_path = None
     }
   in
   define t sym

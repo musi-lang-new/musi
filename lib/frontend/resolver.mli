@@ -6,12 +6,14 @@ type symbol = {
   ; kind : symbol_kind
   ; span : Span.t
   ; mutable ty : int option
+  ; module_path : string option
 }
 
 (** Distinguishes variables from procedures. *)
 and symbol_kind =
   | SymVar of { mutable_ : bool; weak : bool }
   | SymProc of { params : int; extern_ : Node.abi option }
+  | SymAlias of { target : Interner.symbol; target_module : string }
 
 (** Maintains nested scopes and tracks all declared symbols. *)
 type t
