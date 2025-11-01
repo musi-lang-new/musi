@@ -18,6 +18,7 @@ type scope = {
 
 type t = {
     interner : Interner.t
+  ; linker : Linker.t option
   ; mutable curr_scope : scope
   ; diags : Diagnostic.diagnostic_bag ref
 }
@@ -25,7 +26,20 @@ type t = {
 let make_scope parent = { symbols = Hashtbl.create 16; parent }
 
 let create interner =
-  { interner; curr_scope = make_scope None; diags = ref Diagnostic.empty_bag }
+  {
+    interner
+  ; linker = None
+  ; curr_scope = make_scope None
+  ; diags = ref Diagnostic.empty_bag
+  }
+
+let create_with_linker interner linker =
+  {
+    interner
+  ; linker = Some linker
+  ; curr_scope = make_scope None
+  ; diags = ref Diagnostic.empty_bag
+  }
 
 (* https://www.geeksforgeeks.org/dsa/introduction-to-levenshtein-distance/ *)
 let levenshtein s1 s2 =
@@ -97,6 +111,62 @@ let define t sym =
     error t "previous definition here" existing.span
   | None -> Hashtbl.add t.curr_scope.symbols sym.name sym
 
+let resolve_expr_ident t (node : Node.node) name =
+  match lookup t name with
+  | Some _sym -> node.sym <- Some 0
+  | None ->
+    let name_str = Interner.resolve t.interner name in
+    let diag =
+      Diagnostic.error
+        (Printf.sprintf "use of undefined name '%s'" name_str)
+        node.span
+    in
+    let diag =
+      match find_similar_names t name with
+      | (suggestion, _) :: _ ->
+        Diagnostic.with_fixit
+          diag
+          { Diagnostic.span = node.span; replacement = suggestion }
+      | [] -> diag
+    in
+    t.diags := Diagnostic.add !(t.diags) diag
+
+let resolve_expr_import t (node : Node.node) source kind =
+  match t.linker with
+  | Some linker -> (
+    let source_str = Interner.resolve t.interner source in
+    match Linker.load_module linker source_str with
+    | Ok module_info -> (
+      match kind with
+      | Node.Named { items } ->
+        List.iter
+          (fun (item : Node.import_export_item) ->
+            if List.mem item.name module_info.exports then
+              let import_name =
+                match item.alias with Some a -> a | None -> item.name
+              in
+              let sym =
+                {
+                  name = import_name
+                ; kind = SymVar { mutable_ = false; weak = false }
+                ; span = node.span
+                ; ty = None
+                }
+              in
+              define t sym
+            else
+              error
+                t
+                (Printf.sprintf
+                   "'%s' not exported by module '%s'"
+                   (Interner.resolve t.interner item.name)
+                   source_str)
+                node.span)
+          items
+      | Node.Namespace _ -> ())
+    | Error msg -> error t msg node.span)
+  | None -> ()
+
 let rec resolve_node t (node : Node.node) =
   match node.kind with
   | Node.ExprBinding { mutable_; weakness; pat; init; _ } ->
@@ -107,25 +177,7 @@ let rec resolve_node t (node : Node.node) =
     List.iter (resolve_param t) params.items;
     Option.iter (resolve_node t) body;
     exit_scope t
-  | Node.ExprIdent { name } -> (
-    match lookup t name with
-    | Some _sym -> node.sym <- Some 0
-    | None ->
-      let name_str = Interner.resolve t.interner name in
-      let diag =
-        Diagnostic.error
-          (Printf.sprintf "use of undefined name '%s'" name_str)
-          node.span
-      in
-      let diag =
-        match find_similar_names t name with
-        | (suggestion, _) :: _ ->
-          Diagnostic.with_fixit
-            diag
-            { Diagnostic.span = node.span; replacement = suggestion }
-        | [] -> diag
-      in
-      t.diags := Diagnostic.add !(t.diags) diag)
+  | Node.ExprIdent { name } -> resolve_expr_ident t node name
   | Node.ExprCall { callee; args } ->
     resolve_node t callee;
     List.iter (resolve_node t) args.items
@@ -178,11 +230,11 @@ let rec resolve_node t (node : Node.node) =
   | Node.ExprTest { inner; _ } -> resolve_node t inner
   | Node.ExprTry { inner } -> resolve_node t inner
   | Node.ExprDefer { inner } -> resolve_node t inner
+  | Node.ExprImport { source; kind } -> resolve_expr_import t node source kind
   | Node.ExprIntLit _ | Node.ExprBinLit _ | Node.ExprTextLit _
   | Node.ExprBoolLit _ | Node.ExprUnitLit | Node.ExprContinue
-  | Node.ExprImport _ | Node.ExprExport _ | Node.ExprRecord _
-  | Node.ExprChoice _ | Node.ExprInterface _ | Node.PatWildcard | Node.PatRest _
-  | Node.Error ->
+  | Node.ExprExport _ | Node.ExprRecord _ | Node.ExprChoice _
+  | Node.ExprInterface _ | Node.PatWildcard | Node.PatRest _ | Node.Error ->
     ()
   | Node.PatBind { inner } -> resolve_node t inner
   | Node.PatOr { alts } -> List.iter (resolve_node t) alts.items
