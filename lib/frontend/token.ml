@@ -212,7 +212,7 @@ let kind_to_string interner = function
   | MinusGt -> "->"
   | ColonEq -> ":="
   | DotDotLt -> "..<"
-  | DotDot -> "..."
+  | DotDot -> ".."
   | Whitespace -> "whitespace"
   | Newline -> "newline"
   | LineComment { content } ->
