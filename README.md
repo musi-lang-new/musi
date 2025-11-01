@@ -53,7 +53,7 @@ opam exec -- dune build
 ### Run & Test
 
 ```bash
-opam exec -- dune exec packages/bin/main.exe
+opam exec -- dune exec bin/main.exe
 opam exec -- dune test
 ```
 
