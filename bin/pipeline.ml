@@ -11,11 +11,20 @@ let compile_source source =
 
   let ast, parse_diags = Parser.parse_program tokens interner in
 
-  let resolver = Resolver.create interner in
+  let linker = Linker.create interner [ Sys.getcwd () ] in
+  let resolver = Resolver.create_with_linker interner linker in
   let resolve_diags = Resolver.resolve resolver ast in
 
+  let modules = Linker.all_modules linker in
+  List.iter
+    (fun (m : Linker.module_info) -> ignore (Resolver.resolve resolver m.ast))
+    modules;
+
+  let module_asts = List.map (fun (m : Linker.module_info) -> m.ast) modules in
+  let combined_ast = List.concat (module_asts @ [ ast ]) in
+
   let checker = Checker.create interner resolver in
-  let check_diags = Checker.check checker ast in
+  let check_diags = Checker.check checker combined_ast in
 
   let all_diags =
     Diagnostic.merge [ lex_diags; parse_diags; resolve_diags; check_diags ]
@@ -24,7 +33,7 @@ let compile_source source =
   if Diagnostic.has_errors all_diags then Failure all_diags
   else
     let emitter = Emitter.create interner resolver in
-    let program = Emitter.emit_program emitter ast in
+    let program = Emitter.emit_program emitter combined_ast in
     Success program
 
 let compile_file input_path output_path =
