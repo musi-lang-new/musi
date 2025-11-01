@@ -42,7 +42,7 @@ const Point := record {
   y: Bin64;
 };
 
-const Distance := proc (a: Point, b: Point) -> Bin64 {
+const distance := proc (a: Point, b: Point) -> Bin64 {
   const dx := a.x - b.x;
   const dy := a.y - b.y;
   sqrt(dx * dx + dy * dy)
