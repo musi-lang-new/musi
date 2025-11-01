@@ -2,9 +2,9 @@ let () =
   let exit_code =
     try
       match Cli.parse_args () with
-      | Cli.Compile { input; output } -> Commands.compile input output
-      | Cli.Check { input } -> Commands.check input
-      | Cli.Run { input } -> Commands.run input
+      | Cli.Compile { input; output; search_paths } -> Commands.compile input output search_paths
+      | Cli.Check { input; search_paths } -> Commands.check input search_paths
+      | Cli.Run { input; search_paths } -> Commands.run input search_paths
       | Cli.Disasm { input } -> Commands.disasm input
       | Cli.Help -> Commands.help ()
       | Cli.Version -> Commands.version ()
