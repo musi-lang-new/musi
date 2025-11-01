@@ -19,5 +19,8 @@ type t
 (** Creates a resolver with an empty root scope. *)
 val create : Interner.t -> t
 
+(** Looks up a symbol in the current scope chain. *)
+val lookup : t -> Interner.symbol -> symbol option
+
 (** Walks the AST to bind names to declarations, reporting undefined names. *)
 val resolve : t -> Node.program -> Diagnostic.diagnostic_bag
