@@ -10,7 +10,8 @@ let test_builtin_writeln () =
 
 let test_unregistered_extern () =
   let source =
-    "const f := unsafe extern \"intrinsic\" proc (s: Text); f(\"test\")"
+    "const unregistered := unsafe extern \"intrinsic\" proc (s: Text); \
+     unregistered(\"test\")"
   in
   let exit_code = Helpers.compile_and_run source in
   check int "unregistered extern fails" 1 exit_code
