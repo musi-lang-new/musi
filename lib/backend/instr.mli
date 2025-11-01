@@ -176,3 +176,5 @@ type program = {
   ; procs : proc_def array
   ; records : record_type_def list
 }
+
+val show_instr : instr -> string
