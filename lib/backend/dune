@@ -1,7 +1,7 @@
 (library
  (name backend)
  (wrapped false)
- (modules emitter instr bytecode)
+ (modules :standard \ test_emitter)
  (libraries shared frontend))
 
 (test
