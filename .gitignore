@@ -12,6 +12,7 @@
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
+# AI tooling directiories and other stuff
 .amazonq/*
 .claude/*
 .codeium/*
@@ -21,22 +22,30 @@
 !.github/workflows/*
 .sourcegraph/*
 .theia/*
+.augment-guidelines
+.augmentignore
+.cursorignore
+.cursorrules
+.windsurfrules
+!CLAUDE.md
+!GEMINI.md
+
+# Visual Studio Code settings
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
-.augment-guidelines
-.augmentignore
-.cursorignore
-.cursorrules
-.windsurfrules
-# docs/*.md
+
+# Documentation markdown files
+!docs/**/*.md
+docs/_priv/*.md
 *.md
 !CODE_OF_CONDUCT.md
 !CONTRIBUTING.md
 !LICENSE
+!LICENSE.md
 !README.md
 
 # Local History for Visual Studio Code
