@@ -353,8 +353,9 @@ let rec execute vm =
       else
         let args = Array.init target_proc.param_count (fun _ -> pop vm) in
         Array.iter Memory.retain args;
+        let total_locals = target_proc.param_count + target_proc.local_count in
         let locals =
-          Array.init target_proc.local_count (fun i ->
+          Array.init total_locals (fun i ->
             if i < target_proc.param_count then
               args.(target_proc.param_count - 1 - i)
             else Value.Unit)
