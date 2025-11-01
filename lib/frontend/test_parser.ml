@@ -314,7 +314,7 @@ let test_export_modifier () =
   | _ -> fail "expected ExprBinding node"
 
 let test_export_proc () =
-  let tokens, interner = make_parser "export proc foo() { 42 }" in
+  let tokens, interner = make_parser "export const foo := proc() { 42 }" in
   let ast, diags = Parser.parse_program tokens interner in
   check bool "export proc parses" false (Diagnostic.has_errors diags);
   let node = List.hd ast in
