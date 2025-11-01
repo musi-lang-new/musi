@@ -5,6 +5,7 @@ let () =
       | Cli.Compile { input; output } -> Commands.compile input output
       | Cli.Check { input } -> Commands.check input
       | Cli.Run { input } -> Commands.run input
+      | Cli.Disasm { input } -> Commands.disasm input
       | Cli.Help -> Commands.help ()
       | Cli.Version -> Commands.version ()
     with
