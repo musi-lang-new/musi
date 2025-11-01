@@ -174,7 +174,6 @@ let resolve_expr_import t (node : Node.node) source kind =
 let rec resolve_node t (node : Node.node) =
   match node.kind with
   | Node.ExprBinding { mutable_; weakness; pat; init; _ } ->
-    resolve_node t init;
     resolve_pattern_with_init t pat mutable_ weakness init
   | Node.ExprProc { params; body; _ } ->
     enter_scope t;
@@ -264,6 +263,7 @@ and resolve_pattern t pat mutable_ weak =
   | _ -> resolve_node t pat
 
 and resolve_pattern_with_init t pat mutable_ weak init =
+  resolve_node t init;
   match (pat.kind, init.kind) with
   | Node.ExprIdent { name }, Node.ExprProc { params; external_; _ } ->
     let sym =
