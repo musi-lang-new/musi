@@ -130,7 +130,16 @@ let rec collect_metadata_node t (node : Node.node) =
   | Node.ExprProc { body; _ } -> Option.iter (collect_metadata_node t) body
   | _ -> ()
 
-let collect_metadata t program = List.iter (collect_metadata_node t) program
+let collect_metadata t program =
+  ignore
+    (Metadata.add_proc
+       t.metadata
+       (Interner.intern t.interner "$main")
+       0
+       0
+       false
+       None);
+  List.iter (collect_metadata_node t) program
 
 (* ========================================
    PASS 2: BYTECODE EMISSION
