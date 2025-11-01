@@ -216,6 +216,7 @@ let rec emit_expr t (node : Node.node) =
     emit_expr t init;
     match pat.kind with
     | Node.ExprIdent { name } ->
+      emit_instr t Instr.Dup;
       let idx = alloc_local t name in
       emit_stloc t idx
     | _ -> ())
